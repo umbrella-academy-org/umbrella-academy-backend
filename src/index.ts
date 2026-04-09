@@ -3,6 +3,35 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import http from 'http';
 import connectDB from './config/db';
+import { initSocket } from './services/socket';
+
+// Route imports
+import authRoutes from './routes/auth';
+import fieldRoutes from './routes/fields';
+import userRoutes from './routes/users';
+import roadmapRoutes from './routes/roadmaps';
+import sessionRoutes from './routes/sessions';
+import chatRoutes from './routes/chat';
+import paymentRoutes from './routes/payments';
+import walletRoutes from './routes/wallet';
+import statsRoutes from './routes/stats';
+import notificationRoutes from './routes/notifications';
+
+// Model imports for auto-wallet creation hooks
+import Field from './models/Field';
+import Wallet from './models/Wallet';
+
+// Requirement 7.5: Auto-create a Wallet when a new Field document is saved
+Field.schema.post('save', async function (doc: any) {
+  try {
+    const exists = await Wallet.findOne({ ownerId: doc._id, ownerType: 'field' });
+    if (!exists) {
+      await Wallet.create({ ownerId: doc._id, ownerType: 'field', balance: 0, currency: 'RWF' });
+    }
+  } catch (err) {
+    console.error('Failed to auto-create wallet for field:', err);
+  }
+});
 
 const app = express();
 
@@ -18,17 +47,17 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ success: true, message: 'Umbrella Academy API is running' });
 });
 
-// TODO (task 12.1): Mount route groups under /api
-// app.use('/api/auth', authRoutes);
-// app.use('/api/fields', fieldRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/roadmaps', roadmapRoutes);
-// app.use('/api/sessions', sessionRoutes);
-// app.use('/api/chat', chatRoutes);
-// app.use('/api/payments', paymentRoutes);
-// app.use('/api/wallet', walletRoutes);
-// app.use('/api/stats', statsRoutes);
-// app.use('/api/notifications', notificationRoutes);
+// Mount route groups under /api (Requirement 11.6)
+app.use('/api/auth', authRoutes);
+app.use('/api/fields', fieldRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roadmaps', roadmapRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/wallet', walletRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -42,9 +71,8 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// TODO (task socket.ts): initSocket(server) — Socket.io setup
-// import { initSocket } from './services/socket';
-// initSocket(server);
+// Requirement 11.6: Initialize Socket.io
+initSocket(server);
 
 const startServer = async () => {
   try {
