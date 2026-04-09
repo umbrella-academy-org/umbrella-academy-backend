@@ -1,0 +1,104 @@
+import { Schema, model, Document, Types } from 'mongoose';
+
+export type UserRole = 'student' | 'trainer' | 'mentor' | 'field-admin' | 'umbrella-admin';
+export type UserStatus = 'active' | 'inactive' | 'suspended';
+
+export interface IAvailability {
+  weeklyAvailableHours?: number;
+  preferredTimeSlots?: string[];
+  preferredDays?: string[];
+}
+
+export interface ILearningPreferences {
+  pace?: string;
+  style?: string;
+}
+
+export interface IExperience {
+  yearsOfExperience?: number;
+  specializations?: string[];
+}
+
+export interface IUser extends Document {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  fieldId?: Types.ObjectId;
+  status: UserStatus;
+  avatar?: string;
+  // Student-specific
+  educationLevel?: string;
+  availability?: IAvailability;
+  learningPreferences?: ILearningPreferences;
+  trainerId?: Types.ObjectId;
+  mentorId?: Types.ObjectId;
+  // Trainer/Mentor-specific
+  expertise?: string[];
+  experience?: IExperience;
+  // Admin-specific
+  permissions?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const availabilitySchema = new Schema<IAvailability>(
+  {
+    weeklyAvailableHours: { type: Number },
+    preferredTimeSlots: [{ type: String }],
+    preferredDays: [{ type: String }],
+  },
+  { _id: false }
+);
+
+const learningPreferencesSchema = new Schema<ILearningPreferences>(
+  {
+    pace: { type: String },
+    style: { type: String },
+  },
+  { _id: false }
+);
+
+const experienceSchema = new Schema<IExperience>(
+  {
+    yearsOfExperience: { type: Number },
+    specializations: [{ type: String }],
+  },
+  { _id: false }
+);
+
+const userSchema = new Schema<IUser>(
+  {
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    email: { type: String, required: true, unique: true, lowercase: true },
+    password: { type: String, required: true },
+    role: {
+      type: String,
+      enum: ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'],
+      required: true,
+    },
+    fieldId: { type: Schema.Types.ObjectId, ref: 'Field', default: null },
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'suspended'],
+      default: 'active',
+    },
+    avatar: { type: String },
+    // Student-specific
+    educationLevel: { type: String },
+    availability: { type: availabilitySchema },
+    learningPreferences: { type: learningPreferencesSchema },
+    trainerId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    mentorId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    // Trainer/Mentor-specific
+    expertise: [{ type: String }],
+    experience: { type: experienceSchema },
+    // Admin-specific
+    permissions: [{ type: String }],
+  },
+  { timestamps: true }
+);
+
+export default model<IUser>('User', userSchema);
