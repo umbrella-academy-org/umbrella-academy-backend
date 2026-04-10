@@ -7,6 +7,18 @@ interface JwtPayload {
   fieldId?: string;
 }
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: string;
+        role: string;
+        fieldId?: string;
+      };
+    }
+  }
+}
+
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
