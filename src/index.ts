@@ -16,6 +16,7 @@ import paymentRoutes from './routes/payments';
 import walletRoutes from './routes/wallet';
 import statsRoutes from './routes/stats';
 import notificationRoutes from './routes/notifications';
+import systemRoutes from './routes/system';
 
 // Model imports for auto-wallet creation hooks
 import Field from './models/Field';
@@ -58,6 +59,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/system', systemRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
