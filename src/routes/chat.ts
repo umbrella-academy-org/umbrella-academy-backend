@@ -74,10 +74,10 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = new Types.ObjectId(req.user!.userId);
-      const contactId = new Types.ObjectId(req.params.contactId);
+      const contactId = new Types.ObjectId(req.params.contactId as string);
 
-      const skip = parseInt((req.query.skip as string) ?? '0', 10) || 0;
-      const limit = parseInt((req.query.limit as string) ?? '50', 10) || 50;
+      const skip = parseInt(Array.isArray(req.query.skip) ? '0' : (req.query.skip as string) ?? '0', 10) || 0;
+      const limit = parseInt(Array.isArray(req.query.limit) ? '50' : (req.query.limit as string) ?? '50', 10) || 50;
 
       const messages = await Message.find({
         $or: [

@@ -5,6 +5,8 @@ export interface IMessage extends Document {
   recipientId: Types.ObjectId;
   text: string;
   isRead: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const MessageSchema = new Schema<IMessage>(

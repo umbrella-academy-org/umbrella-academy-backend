@@ -1,7 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import Roadmap from '../models/Roadmap';
+import { Types } from 'mongoose';
+import Roadmap, { IPhase, ISession } from '../models/Roadmap';
 import Notification from '../models/Notification';
 import { authenticate, requireRole } from '../middleware/auth';
+
+// Helper to find a subdocument by string id from a plain array
+function findPhase(arr: IPhase[] | undefined, id: string): IPhase | undefined {
+  return arr?.find((item) => (item as any)._id?.toString() === id);
+}
+function findSession(arr: ISession[] | undefined, id: string): ISession | undefined {
+  return arr?.find((item) => (item as any)._id?.toString() === id);
+}
 
 const router = Router();
 
@@ -218,7 +227,7 @@ router.put(
         return;
       }
 
-      const phase = roadmap.phases?.id(req.params.phaseId);
+      const phase = findPhase(roadmap.phases, req.params.phaseId as string);
       if (!phase) {
         res.status(404).json({ success: false, message: 'Phase not found' });
         return;
@@ -264,7 +273,7 @@ router.post(
         return;
       }
 
-      const phase = roadmap.phases?.id(req.params.phaseId);
+      const phase = findPhase(roadmap.phases, req.params.phaseId as string);
       if (!phase) {
         res.status(404).json({ success: false, message: 'Phase not found' });
         return;
@@ -295,13 +304,13 @@ router.put(
         return;
       }
 
-      const phase = roadmap.phases?.id(req.params.phaseId);
+      const phase = findPhase(roadmap.phases, req.params.phaseId as string);
       if (!phase) {
         res.status(404).json({ success: false, message: 'Phase not found' });
         return;
       }
 
-      const session = phase.sessions?.id(req.params.sessionId);
+      const session = findSession(phase.sessions, req.params.sessionId as string);
       if (!session) {
         res.status(404).json({ success: false, message: 'Session not found' });
         return;
