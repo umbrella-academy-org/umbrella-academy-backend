@@ -1,23 +1,34 @@
 import emailjs from '@emailjs/nodejs';
 
-// Template ID constants — set these in your .env file
-export const EMAILJS_TEMPLATE_OTP = process.env.EMAILJS_TEMPLATE_OTP as string;
-export const EMAILJS_TEMPLATE_RESET_PASSWORD = process.env.EMAILJS_TEMPLATE_RESET_PASSWORD as string;
-export const EMAILJS_TEMPLATE_TRAINER_APPROVED = process.env.EMAILJS_TEMPLATE_TRAINER_APPROVED as string;
-export const EMAILJS_TEMPLATE_MENTOR_APPROVED = process.env.EMAILJS_TEMPLATE_MENTOR_APPROVED as string;
+// Single template ID for all transactional emails
+export const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID as string;
+
+interface SendEmailParams {
+  to_email: string;
+  to_name: string;
+  subject: string;
+  message: string;
+}
 
 /**
- * Send an email via EmailJS.
- * OTP codes and reset tokens are NEVER returned from endpoints — only { success: true }.
+ * Send an email via EmailJS using a single template.
+ * OTP codes and reset tokens are NEVER returned from endpoints - only { success: true }.
  */
-export async function sendEmail(
-  templateId: string,
-  templateParams: Record<string, string>
-): Promise<void> {
+export async function sendEmail({
+  to_email,
+  to_name,
+  subject,
+  message,
+}: SendEmailParams): Promise<void> {
   await emailjs.send(
     process.env.EMAILJS_SERVICE_ID as string,
-    templateId,
-    templateParams,
+    EMAILJS_TEMPLATE_ID,
+    {
+      to_email,
+      to_name,
+      subject,
+      message,
+    },
     {
       publicKey: process.env.EMAILJS_PUBLIC_KEY as string,
       privateKey: process.env.EMAILJS_PRIVATE_KEY as string,

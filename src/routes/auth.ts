@@ -5,13 +5,7 @@ import crypto from 'crypto';
 import User, { UserRole } from '../models/User';
 import Wallet from '../models/Wallet';
 import { authenticate, requireRole } from '../middleware/auth';
-import {
-  sendEmail,
-  EMAILJS_TEMPLATE_OTP,
-  EMAILJS_TEMPLATE_RESET_PASSWORD,
-  EMAILJS_TEMPLATE_TRAINER_APPROVED,
-  EMAILJS_TEMPLATE_MENTOR_APPROVED,
-} from '../services/emailService';
+import { sendEmail } from '../services/emailService';
 
 const router = Router();
 
@@ -179,7 +173,12 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
       await User.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
       try {
-        await sendEmail(EMAILJS_TEMPLATE_OTP, { to_email: email, otp_code: otp });
+        await sendEmail({
+          to_email: email,
+          to_name: user.firstName || 'User',
+          subject: 'Your Dreamize Verification Code',
+          message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
+        });
       } catch {
         // Don't fail the request if email sending fails
       }
@@ -234,7 +233,12 @@ router.post('/resend-otp', async (req: Request, res: Response, next: NextFunctio
       await User.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
       try {
-        await sendEmail(EMAILJS_TEMPLATE_OTP, { to_email: email, otp_code: otp });
+        await sendEmail({
+          to_email: email,
+          to_name: user.firstName || 'User',
+          subject: 'Your Dreamize Verification Code',
+          message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
+        });
       } catch {
         // Don't fail the request if email sending fails
       }
@@ -259,7 +263,12 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
       await User.findByIdAndUpdate(user._id, { resetToken, resetTokenExpiry }, { new: true });
 
       try {
-        await sendEmail(EMAILJS_TEMPLATE_RESET_PASSWORD, { to_email: email, reset_token: resetToken });
+        await sendEmail({
+          to_email: email,
+          to_name: user.firstName || 'User',
+          subject: 'Reset Your Dreamize Password',
+          message: `Your password reset code is: ${resetToken}\n\nThis code expires in 10 minutes.`
+        });
       } catch {
         // Don't fail the request if email sending fails
       }
@@ -317,9 +326,11 @@ router.patch(
       }
 
       try {
-        await sendEmail(EMAILJS_TEMPLATE_TRAINER_APPROVED, {
+        await sendEmail({
           to_email: user.email,
-          first_name: user.firstName,
+          to_name: user.firstName,
+          subject: 'Your Trainer Application Has Been Approved',
+          message: `Congratulations! Your trainer application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/login`
         });
       } catch {
         // Don't fail the request if email sending fails
@@ -350,9 +361,11 @@ router.patch(
       }
 
       try {
-        await sendEmail(EMAILJS_TEMPLATE_MENTOR_APPROVED, {
+        await sendEmail({
           to_email: user.email,
-          first_name: user.firstName,
+          to_name: user.firstName,
+          subject: 'Your Mentor Application Has Been Approved',
+          message: `Congratulations! Your mentor application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/login`
         });
       } catch {
         // Don't fail the request if email sending fails

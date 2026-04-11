@@ -57,10 +57,7 @@ jest.mock('../services/socket', () => ({
 // ─── Mock emailService to avoid real EmailJS calls ──────────────────────────
 jest.mock('../services/emailService', () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
-  EMAILJS_TEMPLATE_OTP: 'template_otp',
-  EMAILJS_TEMPLATE_RESET_PASSWORD: 'template_reset',
-  EMAILJS_TEMPLATE_TRAINER_APPROVED: 'template_trainer_approved',
-  EMAILJS_TEMPLATE_MENTOR_APPROVED: 'template_mentor_approved',
+  EMAILJS_TEMPLATE_ID: 'template_unified',
 }));
 
 // ─── Mock all other routes to avoid their DB dependencies ────────────────────
