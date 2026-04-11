@@ -28,6 +28,11 @@ export interface IUser extends Document {
   fieldId?: Types.ObjectId;
   status: UserStatus;
   avatar?: string;
+  // Shared profile fields
+  gender?: string;
+  dateOfBirth?: string;
+  phoneCode?: string;
+  phoneNumber?: string;
   // Student-specific
   educationLevel?: string;
   availability?: IAvailability;
@@ -35,10 +40,21 @@ export interface IUser extends Document {
   trainerId?: Types.ObjectId;
   mentorId?: Types.ObjectId;
   // Trainer/Mentor-specific
+  bio?: string;
+  educationTitle?: string;
+  school?: string;
+  yearOfCompletion?: string;
+  proofDocuments?: string[];
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
   expertise?: string[];
   experience?: IExperience;
   // Admin-specific
   permissions?: string[];
+  // OTP / password-reset fields
+  otpCode?: string;
+  otpExpiry?: Date;
+  resetToken?: string;
+  resetTokenExpiry?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -86,6 +102,11 @@ const userSchema = new Schema<IUser>(
       default: 'active',
     },
     avatar: { type: String },
+    // Shared profile fields
+    gender: { type: String },
+    dateOfBirth: { type: String },
+    phoneCode: { type: String },
+    phoneNumber: { type: String },
     // Student-specific
     educationLevel: { type: String },
     availability: { type: availabilitySchema },
@@ -93,10 +114,25 @@ const userSchema = new Schema<IUser>(
     trainerId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     mentorId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     // Trainer/Mentor-specific
+    bio: { type: String },
+    educationTitle: { type: String },
+    school: { type: String },
+    yearOfCompletion: { type: String },
+    proofDocuments: [{ type: String }],
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: null,
+    },
     expertise: [{ type: String }],
     experience: { type: experienceSchema },
     // Admin-specific
     permissions: [{ type: String }],
+    // OTP / password-reset fields
+    otpCode: { type: String },
+    otpExpiry: { type: Date },
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
   },
   { timestamps: true }
 );

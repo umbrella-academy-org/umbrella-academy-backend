@@ -5,8 +5,8 @@ import http from 'http';
 import connectDB from './config/db';
 import { initSocket } from './services/socket';
 
-// Route imports
 import authRoutes from './routes/auth';
+import fileRoutes from './routes/files';
 import fieldRoutes from './routes/fields';
 import userRoutes from './routes/users';
 import roadmapRoutes from './routes/roadmaps';
@@ -18,11 +18,9 @@ import statsRoutes from './routes/stats';
 import notificationRoutes from './routes/notifications';
 import systemRoutes from './routes/system';
 
-// Model imports for auto-wallet creation hooks
 import Field from './models/Field';
 import Wallet from './models/Wallet';
 
-// Requirement 7.5: Auto-create a Wallet when a new Field document is saved
 Field.schema.post('save', async function (doc: any) {
   try {
     const exists = await Wallet.findOne({ ownerId: doc._id, ownerType: 'field' });
@@ -50,6 +48,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Mount route groups under /api (Requirement 11.6)
 app.use('/api/auth', authRoutes);
+app.use('/api/files', fileRoutes);
 app.use('/api/fields', fieldRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
@@ -73,7 +72,6 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// Requirement 11.6: Initialize Socket.io
 initSocket(server);
 
 const startServer = async () => {
