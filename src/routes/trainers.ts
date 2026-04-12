@@ -8,7 +8,7 @@ const router = Router();
 router.get(
   '/pending',
   authenticate,
-  requireRole('field-admin', 'umbrella-admin'),
+  requireRole('company-admin', 'umbrella-admin'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const filter: Record<string, unknown> = {

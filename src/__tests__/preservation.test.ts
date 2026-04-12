@@ -135,7 +135,7 @@ describe('Preservation 1 — Login with valid credentials (Requirement 3.1)', ()
    * For any valid role with correct credentials, login returns JWT + user object + 200 status.
    * This behavior must be unchanged by the fix.
    */
-  const validRoles = ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'];
+  const validRoles = ['student', 'trainer', 'company-admin', 'umbrella-admin'];
 
   it.each(validRoles)(
     'login with role "%s" and correct credentials returns 200 with token and user',
@@ -151,6 +151,7 @@ describe('Preservation 1 — Login with valid credentials (Requirement 3.1)', ()
         role,
         fieldId: null,
         status: 'active',
+        isVerified: true,
         password: hashedPassword,
       });
 
