@@ -17,11 +17,10 @@ router.get(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // User counts by role
-      const [studentCount, trainerCount, mentorCount, fieldAdminCount] = await Promise.all([
+      const [studentCount, trainerCount, companyAdminCount] = await Promise.all([
         User.countDocuments({ role: 'student' }),
         User.countDocuments({ role: 'trainer' }),
-        User.countDocuments({ role: 'mentor' }),
-        User.countDocuments({ role: 'field-admin' }),
+        User.countDocuments({ role: 'company-admin' }),
       ]);
 
       // Total revenue from completed payments
@@ -82,8 +81,7 @@ router.get(
           usersByRole: {
             student: studentCount,
             trainer: trainerCount,
-            mentor: mentorCount,
-            fieldAdmin: fieldAdminCount,
+            companyAdmin: companyAdminCount,
           },
           totalRevenue,
           monthlyRevenue,
@@ -110,10 +108,9 @@ router.get(
       const enriched = await Promise.all(
         fields.map(async (field) => {
           const fieldIdStr = (field._id as any).toString();
-          const [studentsCount, trainersCount, mentorsCount, revenueAgg] = await Promise.all([
+          const [studentsCount, trainersCount, revenueAgg] = await Promise.all([
             User.countDocuments({ role: 'student', fieldId: fieldIdStr }),
             User.countDocuments({ role: 'trainer', fieldId: fieldIdStr }),
-            User.countDocuments({ role: 'mentor', fieldId: fieldIdStr }),
             Payment.aggregate([
               { $match: { fieldId: field._id, status: 'completed' } },
               { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -129,7 +126,6 @@ router.get(
             isActive: field.isActive,
             studentsCount,
             trainersCount,
-            mentorsCount,
             totalRevenue: revenueAgg[0]?.total ?? 0,
           };
         })

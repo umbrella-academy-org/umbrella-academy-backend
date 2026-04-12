@@ -6,7 +6,7 @@ export interface ICompany extends Document {
   website?: string;
   logo?: string;
   fields: string[]; // field slugs/ids this company offers
-  mentorId?: Types.ObjectId; // assigned mentor
+  adminId?: Types.ObjectId; // assigned company-admin
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -19,7 +19,7 @@ const companySchema = new Schema<ICompany>(
     website: { type: String },
     logo: { type: String },
     fields: [{ type: String }],
-    mentorId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    adminId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

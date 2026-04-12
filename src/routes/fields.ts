@@ -33,28 +33,11 @@ router.get('/:id/trainers', authenticate, async (req: Request, res: Response, ne
   }
 });
 
-// GET /api/fields/:id/mentors — requires auth
-// Requirements 2.4
-router.get('/:id/mentors', authenticate, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const mentors = await User.find({
-      role: 'mentor',
-      fieldId: req.params.id,
-      status: 'active',
-    }).select('-password');
-    res.json({ success: true, data: mentors });
-  } catch (err) {
-    next(err);
-  }
-});
-
 // GET /api/fields/:id/companies — requires auth
-// For MVP: returns field-admin users associated with the field
-// Requirements 2.5
 router.get('/:id/companies', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const companies = await User.find({
-      role: 'field-admin',
+      role: 'company-admin',
       fieldId: req.params.id,
       status: 'active',
     }).select('-password');

@@ -1,6 +1,6 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
-export type UserRole = 'student' | 'trainer' | 'mentor' | 'field-admin' | 'umbrella-admin';
+export type UserRole = 'student' | 'trainer' | 'company-admin' | 'umbrella-admin';
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 
 export interface IAvailability {
@@ -39,9 +39,8 @@ export interface IUser extends Document {
   educationLevel?: string;
   availability?: IAvailability;
   learningPreferences?: ILearningPreferences;
-  trainerId?: Types.ObjectId;
-  mentorId?: Types.ObjectId;
-  // Trainer/Mentor-specific
+  trainerId?: string;
+  // Trainer-specific
   bio?: string;
   educationTitle?: string;
   school?: string;
@@ -94,19 +93,18 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     isVerified: { type: Boolean, default: false },
     role: {
-      type: String, 
-      enum: ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'],
+      type: String,
+      enum: ['student', 'trainer', 'company-admin', 'umbrella-admin'],
       required: true,
     },
-    fieldId: { type: String, default: "" },
-    companyId: { type: String, default: "" },
+    fieldId: { type: String, default: '' },
+    companyId: { type: String, default: '' },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended'],
       default: 'active',
     },
     avatar: { type: String },
-    // Shared profile fields
     gender: { type: String },
     dateOfBirth: { type: String },
     phoneCode: { type: String },
@@ -115,9 +113,8 @@ const userSchema = new Schema<IUser>(
     educationLevel: { type: String },
     availability: { type: availabilitySchema },
     learningPreferences: { type: learningPreferencesSchema },
-    trainerId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
-    mentorId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
-    // Trainer/Mentor-specific
+    trainerId: { type: String, default: null },
+    // Trainer-specific
     bio: { type: String },
     educationTitle: { type: String },
     school: { type: String },

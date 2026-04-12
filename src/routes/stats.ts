@@ -79,35 +79,8 @@ router.get(
         });
       }
 
-      // Requirement 9.3 — Mentor stats
-      if (role === 'mentor') {
-        const [pendingApprovals, approvedRoadmaps, totalStudentsSupervisedAgg] =
-          await Promise.all([
-            Roadmap.countDocuments({
-              mentorId: userObjectId,
-              status: 'pending-approval',
-            }),
-            Roadmap.countDocuments({
-              mentorId: userObjectId,
-              status: 'approved',
-            }),
-            Roadmap.aggregate([
-              { $match: { mentorId: userObjectId } },
-              { $group: { _id: '$studentId' } },
-              { $count: 'count' },
-            ]),
-          ]);
-
-        const totalStudentsSupervised = totalStudentsSupervisedAgg[0]?.count ?? 0;
-
-        return res.json({
-          success: true,
-          data: { pendingApprovals, approvedRoadmaps, totalStudentsSupervised },
-        });
-      }
-
-      // Requirement 9.4 — Field-admin stats
-      if (role === 'field-admin') {
+      // Requirement 9.3 — Company-admin stats
+      if (role === 'company-admin') {
         if (!fieldId) {
           res.status(400).json({ success: false, message: 'No fieldId associated with this user' });
           return;
@@ -144,7 +117,7 @@ router.get(
 
       // Requirement 9.5 — Umbrella-admin stats
       if (role === 'umbrella-admin') {
-        const roles = ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'];
+        const roles = ['student', 'trainer', 'company-admin', 'umbrella-admin'];
 
         const [userCountsByRole, totalRevenueAgg, activeRoadmaps, completedSessions] =
           await Promise.all([

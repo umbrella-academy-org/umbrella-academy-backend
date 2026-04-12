@@ -9,14 +9,14 @@ import { sendEmail } from '../services/emailService';
 
 const router = Router();
 
-const VALID_ROLES: UserRole[] = ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'];
+const VALID_ROLES: UserRole[] = ['student', 'trainer', 'company-admin', 'umbrella-admin'];
 
 function signToken(userId: string, role: string, fieldId: string | undefined): string {
   const secret = process.env.JWT_SECRET as string;
   return jwt.sign({ userId, role, fieldId }, secret, { expiresIn: '7d' });
 }
 
-// POST /api/auth/register/student (Task 5)
+// POST /api/auth/register/student
 router.post('/register/student', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
@@ -67,7 +67,7 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
   }
 });
 
-// POST /api/auth/register/trainer (Task 6)
+// POST /api/auth/register/trainer
 router.post('/register/trainer', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
@@ -99,7 +99,6 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
       isVerified: false,
     });
 
-    // Auto-create Wallet for trainer (preserves existing behavior)
     await Wallet.create({
       ownerId: user._id,
       ownerType: 'trainer',
@@ -109,7 +108,7 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
 
     return res.status(201).json({ success: true, pending: true });
   } catch (err: any) {
-    console.error(err)
+    console.error(err);
     if (err.code === 11000) {
       return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
     }
@@ -117,59 +116,7 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
   }
 });
 
-// POST /api/auth/register/mentor (Task 7)
-router.post('/register/mentor', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const {
-      email, password, firstName, lastName,
-      bio, educationLevel, educationTitle, school, yearOfCompletion, fieldId, expertise,
-      companyId
-    } = req.body;
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      email,
-      password: hashedPassword,
-      role: 'mentor',
-      companyId: companyId || null,
-      firstName,
-      lastName,
-      status: 'active',
-      bio: bio || undefined,
-      educationLevel: educationLevel || undefined,
-      educationTitle: educationTitle || undefined,
-      school: school || undefined,
-      yearOfCompletion: yearOfCompletion || undefined,
-      fieldId: fieldId || null,
-      expertise: expertise || [],
-      isVerified: false,
-    });
-
-    const token = signToken(String(user._id), user.role, user.fieldId ? String(user.fieldId) : undefined);
-
-    return res.status(201).json({
-      success: true,
-      token,
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        fieldId: user.fieldId,
-        status: user.status,
-      },
-    });
-  } catch (err: any) {
-    if (err.code === 11000) {
-      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
-    }
-    next(err);
-  }
-});
-
-// POST /api/auth/send-otp (Task 8)
+// POST /api/auth/send-otp
 router.post('/send-otp', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
@@ -178,7 +125,7 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
     if (user) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const hashedOtp = await bcrypt.hash(otp, 10);
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
       await User.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
@@ -191,11 +138,9 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
         });
       } catch {
         console.error('Error sending OTP');
-        // Don't fail the request if email sending fails
       }
     }
 
-    // Always return success — don't leak user existence
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('Error sending OTP:', err);
@@ -203,7 +148,7 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
   }
 });
 
-// POST /api/auth/verify-otp (Task 9)
+// POST /api/auth/verify-otp
 router.post('/verify-otp', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, otp } = req.body;
@@ -222,7 +167,6 @@ router.post('/verify-otp', async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
-    // Clear OTP fields
     await User.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 } }, { new: true });
 
     return res.status(200).json({ success: true, verified: true });
@@ -231,7 +175,7 @@ router.post('/verify-otp', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-// POST /api/auth/resend-otp (Task 10)
+// POST /api/auth/resend-otp
 router.post('/resend-otp', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
@@ -252,7 +196,6 @@ router.post('/resend-otp', async (req: Request, res: Response, next: NextFunctio
         });
       } catch {
         console.error('Error sending OTP');
-        // Don't fail the request if email sending fails
       }
     }
 
@@ -263,7 +206,7 @@ router.post('/resend-otp', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-// POST /api/auth/forgot-password (Task 11)
+// POST /api/auth/forgot-password
 router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
@@ -271,7 +214,7 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
 
     if (user) {
       const resetToken = crypto.randomUUID();
-      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
       await User.findByIdAndUpdate(user._id, { resetToken, resetTokenExpiry }, { new: true });
 
@@ -283,18 +226,17 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
           message: `Your password reset code is: ${resetToken}\n\nThis code expires in 10 minutes.`
         });
       } catch {
-        // Don't fail the request if email sending fails
+        // ignore
       }
     }
 
-    // Always return success — don't leak user existence
     return res.status(200).json({ success: true });
   } catch (err) {
     next(err);
   }
 });
 
-// POST /api/auth/reset-password (Task 12)
+// POST /api/auth/reset-password
 router.post('/reset-password', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token, newPassword } = req.body;
@@ -321,11 +263,11 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
   }
 });
 
-// PATCH /api/auth/trainers/:id/approve (Task 13)
+// PATCH /api/auth/trainers/:id/approve
 router.patch(
   '/trainers/:id/approve',
   authenticate,
-  requireRole('mentor', 'field-admin', 'umbrella-admin'),
+  requireRole('company-admin', 'umbrella-admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await User.findByIdAndUpdate(
@@ -346,7 +288,7 @@ router.patch(
           message: `Congratulations! Your trainer application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/login`
         });
       } catch {
-        // Don't fail the request if email sending fails
+        // ignore
       }
 
       return res.status(200).json({ success: true, user });
@@ -356,46 +298,11 @@ router.patch(
   }
 );
 
-// PATCH /api/auth/mentors/:id/approve (Task 14)
-router.patch(
-  '/mentors/:id/approve',
-  authenticate,
-  requireRole('field-admin', 'umbrella-admin'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const user = await User.findByIdAndUpdate(
-        req.params.id,
-        { approvalStatus: 'approved', status: 'active' },
-        { new: true }
-      );
-
-      if (!user) {
-        return res.status(404).json({ success: false, message: 'Mentor not found' });
-      }
-
-      try {
-        await sendEmail({
-          to_email: user.email,
-          to_name: user.firstName,
-          subject: 'Your Mentor Application Has Been Approved',
-          message: `Congratulations! Your mentor application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/login`
-        });
-      } catch {
-        // Don't fail the request if email sending fails
-      }
-
-      return res.status(200).json({ success: true, user });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// POST /api/auth/trainers/:id/reject (Task 3.3)
+// POST /api/auth/trainers/:id/reject
 router.post(
   '/trainers/:id/reject',
   authenticate,
-  requireRole('field-admin', 'umbrella-admin'),
+  requireRole('company-admin', 'umbrella-admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await User.findById(req.params.id);
@@ -418,7 +325,7 @@ router.post(
           message: `We regret to inform you that your trainer application has not been approved at this time.`
         });
       } catch {
-        // Don't fail the request if email sending fails
+        // ignore
       }
 
       return res.status(200).json({ success: true, data: updatedUser });
@@ -428,44 +335,7 @@ router.post(
   }
 );
 
-// POST /api/auth/mentors/:id/reject (Task 3.3)
-router.post(
-  '/mentors/:id/reject',
-  authenticate,
-  requireRole('field-admin', 'umbrella-admin'),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const user = await User.findById(req.params.id);
-
-      if (!user || user.role !== 'mentor') {
-        return res.status(404).json({ success: false, message: 'Mentor not found' });
-      }
-
-      const updatedUser = await User.findByIdAndUpdate(
-        req.params.id,
-        { approvalStatus: 'rejected', status: 'inactive' },
-        { new: true }
-      );
-
-      try {
-        await sendEmail({
-          to_email: user.email,
-          to_name: user.firstName,
-          subject: 'Your Mentor Application Has Been Rejected',
-          message: `We regret to inform you that your mentor application has not been approved at this time.`
-        });
-      } catch {
-        // Don't fail the request if email sending fails
-      }
-
-      return res.status(200).json({ success: true, data: updatedUser });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// POST /api/auth/login (Task 16 — updated with approval check)
+// POST /api/auth/login
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
@@ -484,9 +354,9 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    // Block unapproved trainers/mentors (Task 16)
+    // Block unapproved trainers
     if (
-      (user.role === 'trainer' || user.role === 'mentor') &&
+      user.role === 'trainer' &&
       user.approvalStatus !== null &&
       user.approvalStatus !== undefined &&
       user.approvalStatus !== 'approved'
@@ -514,7 +384,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-// POST /api/auth/register (Task 17 — kept for backward compatibility with preservation tests)
+// POST /api/auth/register — generic (backward compat)
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, role, firstName, lastName, fieldId } = req.body;
@@ -537,7 +407,6 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       fieldId: fieldId || null,
     });
 
-    // Auto-create Wallet for trainer (Requirement 7.4)
     if (role === 'trainer') {
       await Wallet.create({
         ownerId: user._id,

@@ -39,7 +39,6 @@ export interface IRoadmap extends Document {
   description?: string;
   studentId: Types.ObjectId;
   trainerId?: Types.ObjectId;
-  mentorId?: Types.ObjectId;
   fieldId?: Types.ObjectId;
   status: RoadmapStatus;
   difficulty?: Difficulty;
@@ -103,7 +102,6 @@ const roadmapSchema = new Schema<IRoadmap>(
     description: { type: String },
     studentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     trainerId: { type: Schema.Types.ObjectId, ref: 'User' },
-    mentorId: { type: Schema.Types.ObjectId, ref: 'User' },
     fieldId: { type: Schema.Types.ObjectId, ref: 'Field' },
     status: {
       type: String,
