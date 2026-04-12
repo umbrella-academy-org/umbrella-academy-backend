@@ -39,6 +39,7 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
       phoneNumber: phoneNumber || undefined,
       educationLevel: educationLevel || undefined,
       fieldId: fieldId || null,
+      isVerified: false,
     });
 
     const token = signToken(String(user._id), user.role, user.fieldId ? String(user.fieldId) : undefined);
@@ -91,6 +92,7 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
       fieldId: fieldId || null,
       availability: availability || undefined,
       proofDocuments: proofDocuments || [],
+      isVerified: false,
     });
 
     // Auto-create Wallet for trainer (preserves existing behavior)
@@ -134,6 +136,7 @@ router.post('/register/mentor', async (req: Request, res: Response, next: NextFu
       yearOfCompletion: yearOfCompletion || undefined,
       fieldId: fieldId || null,
       expertise: expertise || [],
+      isVerified: false,
     });
 
     const token = signToken(String(user._id), user.role, user.fieldId ? String(user.fieldId) : undefined);
@@ -389,6 +392,10 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ success: false, message: 'Your email is not verified. Please verify your email to login.' });
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);

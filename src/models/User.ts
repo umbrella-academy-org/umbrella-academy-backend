@@ -28,6 +28,7 @@ export interface IUser extends Document {
   fieldId?: Types.ObjectId;
   status: UserStatus;
   avatar?: string;
+  isVerified: boolean;
   // Shared profile fields
   gender?: string;
   dateOfBirth?: string;
