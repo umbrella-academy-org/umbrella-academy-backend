@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { Types } from 'mongoose';
 import Roadmap, { IPhase, ISession } from '../models/Roadmap';
 import Notification from '../models/Notification';
 import { authenticate, requireRole } from '../middleware/auth';
@@ -25,9 +24,7 @@ router.get('/', authenticate, async (req: Request, res: Response, next: NextFunc
       filter = { studentId: userId };
     } else if (role === 'trainer') {
       filter = { trainerId: userId };
-    } else if (role === 'mentor') {
-      filter = { mentorId: userId };
-    } else if (role === 'field-admin') {
+    } else if (role === 'company-admin') {
       filter = { fieldId };
     }
     // umbrella-admin: no filter — return all
@@ -47,7 +44,7 @@ router.post(
   requireRole('student', 'trainer'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { title, description, studentId, trainerId, mentorId, fieldId, phases, difficulty, estimatedDuration } =
+      const { title, description, studentId, trainerId, fieldId, phases, difficulty, estimatedDuration } =
         req.body;
 
       const roadmap = await Roadmap.create({
@@ -59,7 +56,7 @@ router.post(
         phases,
         difficulty,
         estimatedDuration,
-        status: 'draft', // always forced to draft
+        status: 'draft',
       });
 
       res.status(201).json({ success: true, data: roadmap });
@@ -140,11 +137,10 @@ router.post(
 );
 
 // PUT /api/roadmaps/:id/approve — approve or reject, notify student and trainer
-// Requirements 3.3, 3.4, 10.2
 router.put(
   '/:id/approve',
   authenticate,
-  requireRole('mentor'),
+  requireRole('company-admin', 'umbrella-admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { approved, approvalNotes } = req.body as { approved: boolean; approvalNotes?: string };
