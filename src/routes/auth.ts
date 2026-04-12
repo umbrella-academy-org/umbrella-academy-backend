@@ -391,6 +391,80 @@ router.patch(
   }
 );
 
+// POST /api/auth/trainers/:id/reject (Task 3.3)
+router.post(
+  '/trainers/:id/reject',
+  authenticate,
+  requireRole('field-admin', 'umbrella-admin'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = await User.findById(req.params.id);
+
+      if (!user || user.role !== 'trainer') {
+        return res.status(404).json({ success: false, message: 'Trainer not found' });
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        req.params.id,
+        { approvalStatus: 'rejected', status: 'inactive' },
+        { new: true }
+      );
+
+      try {
+        await sendEmail({
+          to_email: user.email,
+          to_name: user.firstName,
+          subject: 'Your Trainer Application Has Been Rejected',
+          message: `We regret to inform you that your trainer application has not been approved at this time.`
+        });
+      } catch {
+        // Don't fail the request if email sending fails
+      }
+
+      return res.status(200).json({ success: true, data: updatedUser });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/auth/mentors/:id/reject (Task 3.3)
+router.post(
+  '/mentors/:id/reject',
+  authenticate,
+  requireRole('field-admin', 'umbrella-admin'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = await User.findById(req.params.id);
+
+      if (!user || user.role !== 'mentor') {
+        return res.status(404).json({ success: false, message: 'Mentor not found' });
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        req.params.id,
+        { approvalStatus: 'rejected', status: 'inactive' },
+        { new: true }
+      );
+
+      try {
+        await sendEmail({
+          to_email: user.email,
+          to_name: user.firstName,
+          subject: 'Your Mentor Application Has Been Rejected',
+          message: `We regret to inform you that your mentor application has not been approved at this time.`
+        });
+      } catch {
+        // Don't fail the request if email sending fails
+      }
+
+      return res.status(200).json({ success: true, data: updatedUser });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // POST /api/auth/login (Task 16 — updated with approval check)
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {

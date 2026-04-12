@@ -10,6 +10,8 @@ import authRoutes from './routes/auth';
 import fileRoutes from './routes/files';
 import fieldRoutes from './routes/fields';
 import userRoutes from './routes/users';
+import trainerRoutes from './routes/trainers';
+import mentorRoutes from './routes/mentors';
 import roadmapRoutes from './routes/roadmaps';
 import sessionRoutes from './routes/sessions';
 import chatRoutes from './routes/chat';
@@ -18,6 +20,7 @@ import walletRoutes from './routes/wallet';
 import statsRoutes from './routes/stats';
 import notificationRoutes from './routes/notifications';
 import systemRoutes from './routes/system';
+import adminRoutes from './routes/admin';
 
 import Field from './models/Field';
 import Wallet from './models/Wallet';
@@ -52,6 +55,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/fields', fieldRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/trainers', trainerRoutes);
+app.use('/api/mentors', mentorRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/chat', chatRoutes);
@@ -60,6 +65,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
