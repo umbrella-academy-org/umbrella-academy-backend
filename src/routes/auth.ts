@@ -22,6 +22,7 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
     const {
       email, password, firstName, lastName,
       gender, dateOfBirth, phoneCode, phoneNumber, educationLevel, fieldId,
+      companyId
     } = req.body;
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -32,6 +33,7 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
       role: 'student',
       firstName,
       lastName,
+      companyId: companyId || null,
       status: 'active',
       gender: gender || undefined,
       dateOfBirth: dateOfBirth || undefined,
@@ -72,6 +74,7 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
       email, password, firstName, lastName,
       bio, educationLevel, educationTitle, school, yearOfCompletion,
       fieldId, availability, proofDocuments,
+      companyId
     } = req.body;
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -82,6 +85,7 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
       role: 'trainer',
       firstName,
       lastName,
+      companyId: companyId || null,
       status: 'inactive',
       approvalStatus: 'pending',
       bio: bio || undefined,
@@ -105,6 +109,7 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
 
     return res.status(201).json({ success: true, pending: true });
   } catch (err: any) {
+    console.error(err)
     if (err.code === 11000) {
       return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
     }
@@ -118,6 +123,7 @@ router.post('/register/mentor', async (req: Request, res: Response, next: NextFu
     const {
       email, password, firstName, lastName,
       bio, educationLevel, educationTitle, school, yearOfCompletion, fieldId, expertise,
+      companyId
     } = req.body;
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -126,6 +132,7 @@ router.post('/register/mentor', async (req: Request, res: Response, next: NextFu
       email,
       password: hashedPassword,
       role: 'mentor',
+      companyId: companyId || null,
       firstName,
       lastName,
       status: 'active',

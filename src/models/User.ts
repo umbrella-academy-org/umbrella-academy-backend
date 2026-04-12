@@ -25,7 +25,8 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
-  fieldId?: Types.ObjectId;
+  fieldId?: string;
+  companyId?: string;
   status: UserStatus;
   avatar?: string;
   isVerified: boolean;
@@ -96,7 +97,8 @@ const userSchema = new Schema<IUser>(
       enum: ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'],
       required: true,
     },
-    fieldId: { type: Schema.Types.ObjectId, ref: 'Field', default: null },
+    fieldId: { type: String, default: "" },
+    companyId: { type: String, default: "" },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended'],

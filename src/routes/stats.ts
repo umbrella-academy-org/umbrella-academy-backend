@@ -113,14 +113,14 @@ router.get(
           return;
         }
 
-        const fieldObjectId = new Types.ObjectId(fieldId);
+
 
         const [totalStudents, totalTrainers, totalFieldRevenueAgg, activeRoadmaps] =
           await Promise.all([
-            User.countDocuments({ role: 'student', fieldId: fieldObjectId }),
-            User.countDocuments({ role: 'trainer', fieldId: fieldObjectId }),
+            User.countDocuments({ role: 'student', fieldId: fieldId }),
+            User.countDocuments({ role: 'trainer', fieldId: fieldId }),
             Payment.aggregate([
-              { $match: { fieldId: fieldObjectId, status: 'completed' } },
+              { $match: { fieldId: fieldId, status: 'completed' } },
               {
                 $group: {
                   _id: null,
@@ -129,7 +129,7 @@ router.get(
               },
             ]),
             Roadmap.countDocuments({
-              fieldId: fieldObjectId,
+              fieldId: fieldId,
               status: { $in: ['active', 'approved'] },
             }),
           ]);
