@@ -180,6 +180,7 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
           message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
         });
       } catch {
+        console.error('Error sending OTP');
         // Don't fail the request if email sending fails
       }
     }
@@ -187,6 +188,7 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
     // Always return success — don't leak user existence
     return res.status(200).json({ success: true });
   } catch (err) {
+    console.error('Error sending OTP:', err);
     next(err);
   }
 });
@@ -224,7 +226,6 @@ router.post('/resend-otp', async (req: Request, res: Response, next: NextFunctio
   try {
     const { email } = req.body;
     const user = await User.findOne({ email: email?.toLowerCase() });
-
     if (user) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const hashedOtp = await bcrypt.hash(otp, 10);
@@ -240,12 +241,14 @@ router.post('/resend-otp', async (req: Request, res: Response, next: NextFunctio
           message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
         });
       } catch {
+        console.error('Error sending OTP');
         // Don't fail the request if email sending fails
       }
     }
 
     return res.status(200).json({ success: true });
   } catch (err) {
+    console.error('Error resending OTP:', err);
     next(err);
   }
 });
