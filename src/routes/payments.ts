@@ -39,9 +39,57 @@ router.post(
 router.get(
   '/',
   authenticate,
-  requireRole('student'),
+  requireRole('student', 'umbrella-admin', 'field-admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const role = req.user!.role;
+
+      // Admin path: umbrella-admin or field-admin with optional filters
+      if (role === 'umbrella-admin' || role === 'field-admin') {
+        const { fieldId, status, from, to } = req.query as {
+          fieldId?: string;
+          status?: string;
+          from?: string;
+          to?: string;
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const filter: Record<string, any> = {};
+
+        // field-admin is always scoped to their own fieldId
+        if (role === 'field-admin') {
+          filter.fieldId = new Types.ObjectId(req.user!.fieldId as string);
+        } else if (fieldId) {
+          filter.fieldId = new Types.ObjectId(fieldId);
+        }
+
+        if (status) {
+          filter.status = status;
+        }
+
+        if (from || to) {
+          filter.$or = [
+            {
+              processedAt: {
+                ...(from ? { $gte: new Date(from) } : {}),
+                ...(to ? { $lte: new Date(to) } : {}),
+              },
+            },
+            {
+              createdAt: {
+                ...(from ? { $gte: new Date(from) } : {}),
+                ...(to ? { $lte: new Date(to) } : {}),
+              },
+            },
+          ];
+        }
+
+        const payments = await Payment.find(filter).sort({ createdAt: -1 });
+        res.json({ success: true, data: payments });
+        return;
+      }
+
+      // Student path: scoped to their own payments
       const payments = await Payment.find({
         studentId: new Types.ObjectId(req.user!.userId),
       }).sort({ createdAt: -1 });
