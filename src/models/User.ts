@@ -92,8 +92,9 @@ const userSchema = new Schema<IUser>(
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true },
+    isVerified: { type: Boolean, default: false },
     role: {
-      type: String,
+      type: String, 
       enum: ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'],
       required: true,
     },
