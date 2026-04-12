@@ -55,7 +55,6 @@ router.post(
         description,
         studentId,
         trainerId,
-        mentorId,
         fieldId,
         phases,
         difficulty,
@@ -123,9 +122,9 @@ router.post(
         return;
       }
 
-      if (roadmap.mentorId) {
+      if (roadmap.trainerId) {
         await Notification.create({
-          userId: roadmap.mentorId,
+          userId: roadmap.trainerId,
           type: 'roadmap-submitted',
           title: 'Roadmap Submitted for Approval',
           message: `Roadmap "${roadmap.title}" has been submitted for your approval.`,

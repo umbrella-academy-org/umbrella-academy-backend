@@ -346,10 +346,10 @@ describe('Preservation 5 — 401 on invalid token (Requirements 3.7, 3.8)', () =
 describe('Preservation 6 — Valid roles accepted by register (Requirement 3.1)', () => {
   /**
    * Validates: Requirement 3.1
-   * All 5 valid roles (student, trainer, mentor, field-admin, umbrella-admin)
+   * All 4 valid roles (student, trainer, company-admin, umbrella-admin)
    * are accepted by the register endpoint.
    */
-  const validRoles = ['student', 'trainer', 'mentor', 'field-admin', 'umbrella-admin'];
+  const validRoles = ['student', 'trainer', 'company-admin', 'umbrella-admin'];
 
   it.each(validRoles)(
     'POST /api/auth/register with role "%s" returns 201',
