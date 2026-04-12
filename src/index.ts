@@ -4,6 +4,7 @@ import cors from 'cors';
 import http from 'http';
 import connectDB from './config/db';
 import { initSocket } from './services/socket';
+import './seed/seedOwner';
 
 import authRoutes from './routes/auth';
 import fileRoutes from './routes/files';
