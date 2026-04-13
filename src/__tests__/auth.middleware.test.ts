@@ -73,7 +73,7 @@ describe('authenticate', () => {
   });
 
   it('attaches decoded user and calls next for a valid token', () => {
-    const payload = { userId: 'u1', role: 'student', fieldId: 'f1' };
+    const payload = { userId: 'u1', role: 'student' };
     const token = jwt.sign(payload, JWT_SECRET);
     const req = makeReq(`Bearer ${token}`);
     const res = makeRes();
@@ -86,7 +86,7 @@ describe('authenticate', () => {
   });
 
   it('attaches user without fieldId when not present in token', () => {
-    const token = jwt.sign({ userId: 'u2', role: 'umbrella-admin' }, JWT_SECRET);
+    const token = jwt.sign({ userId: 'u2', role: 'admin' }, JWT_SECRET);
     const req = makeReq(`Bearer ${token}`);
     const res = makeRes();
     const next = jest.fn() as NextFunction;
@@ -95,7 +95,7 @@ describe('authenticate', () => {
 
     expect(next).toHaveBeenCalled();
     expect(req.user?.userId).toBe('u2');
-    expect(req.user?.role).toBe('umbrella-admin');
+    expect(req.user?.role).toBe('admin');
   });
 });
 
@@ -105,11 +105,11 @@ describe('requireRole', () => {
   }
 
   it('calls next when role is allowed', () => {
-    const req = makeAuthedReq('field-admin');
+    const req = makeAuthedReq('admin');
     const res = makeRes();
     const next = jest.fn() as NextFunction;
 
-    requireRole('field-admin', 'umbrella-admin')(req, res, next);
+    requireRole('admin')(req, res, next);
 
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
@@ -120,7 +120,7 @@ describe('requireRole', () => {
     const res = makeRes();
     const next = jest.fn() as NextFunction;
 
-    requireRole('field-admin', 'umbrella-admin')(req, res, next);
+    requireRole('admin')(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();

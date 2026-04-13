@@ -2,7 +2,6 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import User from '../models/User';
 import Payment from '../models/Payment';
-import Field from '../models/Field';
 import Roadmap from '../models/Roadmap';
 import LiveSession from '../models/LiveSession';
 import FeedbackTicket from '../models/FeedbackTicket';
@@ -13,14 +12,13 @@ const router = Router();
 router.get(
   '/analytics',
   authenticate,
-  requireRole('umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // User counts by role
-      const [studentCount, trainerCount, companyAdminCount] = await Promise.all([
+      const [studentCount, trainerCount] = await Promise.all([
         User.countDocuments({ role: 'student' }),
         User.countDocuments({ role: 'trainer' }),
-        User.countDocuments({ role: 'company-admin' }),
       ]);
 
       // Total revenue from completed payments
@@ -45,93 +43,19 @@ router.get(
       // Completed live sessions
       const completedSessions = await LiveSession.countDocuments({ status: 'completed' });
 
-      // Per-field breakdowns
-      const fields = await Field.find({});
-      const fieldBreakdowns = await Promise.all(
-        fields.map(async (field) => {
-          const fieldIdStr = (field._id as any).toString();
-          const [students, revenue] = await Promise.all([
-            User.countDocuments({ role: 'student', fieldId: fieldIdStr }),
-            Payment.aggregate([
-              { $match: { fieldId: field._id, status: 'completed' } },
-              { $group: { _id: null, total: { $sum: '$amount' } } },
-            ]),
-          ]);
-          // Completion rate: completed roadmaps / total roadmaps for this field
-          const [totalRoadmaps, completedRoadmaps] = await Promise.all([
-            Roadmap.countDocuments({ fieldId: field._id }),
-            Roadmap.countDocuments({ fieldId: field._id, status: 'completed' }),
-          ]);
-          const completionRate =
-            totalRoadmaps > 0 ? Math.round((completedRoadmaps / totalRoadmaps) * 100) : 0;
-
-          return {
-            fieldId: fieldIdStr,
-            fieldName: field.name,
-            students,
-            revenue: revenue[0]?.total ?? 0,
-            completionRate,
-          };
-        })
-      );
-
       res.json({
         success: true,
         data: {
           usersByRole: {
             student: studentCount,
             trainer: trainerCount,
-            companyAdmin: companyAdminCount,
           },
           totalRevenue,
           monthlyRevenue,
           activeRoadmaps,
           completedSessions,
-          fieldBreakdowns,
         },
       });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// GET /api/admin/fields — fields with enriched stats (Requirement 10.12)
-router.get(
-  '/fields',
-  authenticate,
-  requireRole('umbrella-admin'),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const fields = await Field.find({});
-
-      const enriched = await Promise.all(
-        fields.map(async (field) => {
-          const fieldIdStr = (field._id as any).toString();
-          const [studentsCount, trainersCount, revenueAgg] = await Promise.all([
-            User.countDocuments({ role: 'student', fieldId: fieldIdStr }),
-            User.countDocuments({ role: 'trainer', fieldId: fieldIdStr }),
-            Payment.aggregate([
-              { $match: { fieldId: field._id, status: 'completed' } },
-              { $group: { _id: null, total: { $sum: '$amount' } } },
-            ]),
-          ]);
-
-          return {
-            _id: fieldIdStr,
-            name: field.name,
-            slug: field.slug,
-            description: field.description,
-            monthlyPrice: field.monthlyPrice,
-            isActive: field.isActive,
-            studentsCount,
-            trainersCount,
-            totalRevenue: revenueAgg[0]?.total ?? 0,
-          };
-        })
-      );
-
-      res.json({ success: true, data: enriched });
     } catch (err) {
       next(err);
     }
@@ -142,7 +66,7 @@ router.get(
 router.get(
   '/feedback',
   authenticate,
-  requireRole('umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const tickets = await FeedbackTicket.find({})
@@ -160,7 +84,7 @@ router.get(
 router.patch(
   '/feedback/:id',
   authenticate,
-  requireRole('umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { status } = req.body as { status?: string };
@@ -193,7 +117,7 @@ router.patch(
 router.post(
   '/feedback/:id/response',
   authenticate,
-  requireRole('umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { response } = req.body as { response?: string };

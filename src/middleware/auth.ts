@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 interface JwtPayload {
   userId: string;
   role: string;
-  fieldId?: string;
 }
 
 declare global {
@@ -13,7 +12,6 @@ declare global {
       user?: {
         userId: string;
         role: string;
-        fieldId?: string;
       };
     }
   }
@@ -35,7 +33,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     req.user = {
       userId: decoded.userId,
       role: decoded.role,
-      fieldId: decoded.fieldId,
     };
     next();
   } catch {

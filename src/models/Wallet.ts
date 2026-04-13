@@ -12,7 +12,7 @@ export interface ITransaction {
 
 export interface IWallet extends Document {
   ownerId: Types.ObjectId;
-  ownerType: 'trainer' | 'field' | 'umbrella';
+  ownerType: 'trainer' | 'admin';
   balance: number;
   currency: string;
   transactions: ITransaction[];
@@ -34,7 +34,7 @@ const TransactionSchema = new Schema<ITransaction>(
 const WalletSchema = new Schema<IWallet>(
   {
     ownerId: { type: Schema.Types.ObjectId, required: true },
-    ownerType: { type: String, enum: ['trainer', 'field', 'umbrella'] },
+    ownerType: { type: String, enum: ['trainer', 'admin'] },
     balance: { type: Number, default: 0 },
     currency: { type: String, default: 'RWF' },
     transactions: { type: [TransactionSchema], default: [] },

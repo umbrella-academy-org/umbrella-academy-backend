@@ -9,11 +9,11 @@ import { sendEmail } from '../services/emailService';
 
 const router = Router();
 
-const VALID_ROLES: UserRole[] = ['student', 'trainer', 'company-admin', 'umbrella-admin'];
+const VALID_ROLES: UserRole[] = ['student', 'trainer', 'admin'];
 
-function signToken(userId: string, role: string, fieldId: string | undefined): string {
+function signToken(userId: string, role: string): string {
   const secret = process.env.JWT_SECRET as string;
-  return jwt.sign({ userId, role, fieldId }, secret, { expiresIn: '7d' });
+  return jwt.sign({ userId, role }, secret, { expiresIn: '7d' });
 }
 
 // POST /api/auth/register/student
@@ -21,8 +21,7 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
   try {
     const {
       email, password, firstName, lastName,
-      gender, dateOfBirth, phoneCode, phoneNumber, educationLevel, fieldId,
-      companyId
+      gender, dateOfBirth, phoneCode, phoneNumber, educationLevel,
     } = req.body;
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -33,18 +32,16 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
       role: 'student',
       firstName,
       lastName,
-      companyId: companyId || null,
       status: 'active',
       gender: gender || undefined,
       dateOfBirth: dateOfBirth || undefined,
       phoneCode: phoneCode || undefined,
       phoneNumber: phoneNumber || undefined,
       educationLevel: educationLevel || undefined,
-      fieldId: fieldId || null,
       isVerified: false,
     });
 
-    const token = signToken(String(user._id), user.role, user.fieldId ? String(user.fieldId) : undefined);
+    const token = signToken(String(user._id), user.role);
 
     return res.status(201).json({
       success: true,
@@ -55,7 +52,6 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        fieldId: user.fieldId,
         status: user.status,
       },
     });
@@ -73,8 +69,7 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
     const {
       email, password, firstName, lastName,
       bio, educationLevel, educationTitle, school, yearOfCompletion,
-      fieldId, availability, proofDocuments,
-      companyId
+      availability, proofDocuments,
     } = req.body;
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -85,7 +80,6 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
       role: 'trainer',
       firstName,
       lastName,
-      companyId: companyId || null,
       status: 'inactive',
       approvalStatus: 'pending',
       bio: bio || undefined,
@@ -93,7 +87,6 @@ router.post('/register/trainer', async (req: Request, res: Response, next: NextF
       educationTitle: educationTitle || undefined,
       school: school || undefined,
       yearOfCompletion: yearOfCompletion || undefined,
-      fieldId: fieldId || null,
       availability: availability || undefined,
       proofDocuments: proofDocuments || [],
       isVerified: false,
@@ -267,7 +260,7 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
 router.patch(
   '/trainers/:id/approve',
   authenticate,
-  requireRole('company-admin', 'umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await User.findByIdAndUpdate(
@@ -302,7 +295,7 @@ router.patch(
 router.post(
   '/trainers/:id/reject',
   authenticate,
-  requireRole('company-admin', 'umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await User.findById(req.params.id);
@@ -364,7 +357,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       return res.status(403).json({ success: false, message: 'Your application is pending approval.' });
     }
 
-    const token = signToken(String(user._id), user.role, user.fieldId ? String(user.fieldId) : undefined);
+    const token = signToken(String(user._id), user.role);
 
     return res.status(200).json({
       success: true,
@@ -375,7 +368,6 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        fieldId: user.fieldId,
         status: user.status,
       },
     });
@@ -387,7 +379,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 // POST /api/auth/register — generic (backward compat)
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, role, firstName, lastName, fieldId } = req.body;
+    const { email, password, role, firstName, lastName } = req.body;
 
     if (!VALID_ROLES.includes(role)) {
       return res.status(400).json({
@@ -404,7 +396,6 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       role,
       firstName,
       lastName,
-      fieldId: fieldId || null,
     });
 
     if (role === 'trainer') {
@@ -416,7 +407,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       });
     }
 
-    const token = signToken(String(user._id), user.role, user.fieldId ? String(user.fieldId) : undefined);
+    const token = signToken(String(user._id), user.role);
 
     return res.status(201).json({
       success: true,
@@ -427,7 +418,6 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        fieldId: user.fieldId,
         status: user.status,
       },
     });

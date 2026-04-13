@@ -1,14 +1,12 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IRevenueDistribution {
-  fieldShare?: number;
   academyShare?: number;
   processingFee?: number;
 }
 
 export interface IPayment extends Document {
   studentId: Types.ObjectId;
-  fieldId: Types.ObjectId;
   amount: number;
   currency: string;
   phoneNumber: string;
@@ -21,7 +19,6 @@ export interface IPayment extends Document {
 const PaymentSchema = new Schema<IPayment>(
   {
     studentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    fieldId: { type: Schema.Types.ObjectId, ref: 'Field', required: true },
     amount: { type: Number, required: true },
     currency: { type: String, default: 'RWF' },
     phoneNumber: { type: String, required: true },
@@ -33,7 +30,6 @@ const PaymentSchema = new Schema<IPayment>(
     },
     processedAt: { type: Date },
     revenueDistribution: {
-      fieldShare: { type: Number },
       academyShare: { type: Number },
       processingFee: { type: Number },
     },

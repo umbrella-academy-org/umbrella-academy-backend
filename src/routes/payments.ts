@@ -15,11 +15,10 @@ router.post(
   requireRole('student'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { studentId, fieldId, amount, phoneNumber, momoTransactionId } = req.body;
+      const { studentId, amount, phoneNumber, momoTransactionId } = req.body;
 
       const payment = await Payment.create({
         studentId,
-        fieldId,
         amount,
         phoneNumber,
         momoTransactionId,
@@ -39,15 +38,14 @@ router.post(
 router.get(
   '/',
   authenticate,
-  requireRole('student', 'umbrella-admin', 'field-admin'),
+  requireRole('student', 'admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const role = req.user!.role;
 
-      // Admin path: umbrella-admin or field-admin with optional filters
-      if (role === 'umbrella-admin' || role === 'field-admin') {
-        const { fieldId, status, from, to } = req.query as {
-          fieldId?: string;
+      // Admin path: optional filters
+      if (role === 'admin') {
+        const { status, from, to } = req.query as {
           status?: string;
           from?: string;
           to?: string;
@@ -55,13 +53,6 @@ router.get(
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const filter: Record<string, any> = {};
-
-        // field-admin is always scoped to their own fieldId
-        if (role === 'field-admin') {
-          filter.fieldId = new Types.ObjectId(req.user!.fieldId as string);
-        } else if (fieldId) {
-          filter.fieldId = new Types.ObjectId(fieldId);
-        }
 
         if (status) {
           filter.status = status;
@@ -101,12 +92,12 @@ router.get(
   }
 );
 
-// PUT /api/payments/:id/confirm — confirm payment and distribute revenue (umbrella-admin)
+// PUT /api/payments/:id/confirm — confirm payment and distribute revenue (admin)
 // Requirements: 6.2, 6.3, 6.4, 10.4
 router.put(
   '/:id/confirm',
   authenticate,
-  requireRole('umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const payment = await Payment.findById(req.params.id);
@@ -117,7 +108,6 @@ router.put(
       }
 
       const { amount } = payment;
-      const fieldShare = amount * 0.65;
       const academyShare = amount * 0.25;
       const processingFee = amount * 0.10;
 
@@ -125,39 +115,17 @@ router.put(
         // Step 1: Update payment to completed
         payment.status = 'completed';
         payment.processedAt = new Date();
-        payment.revenueDistribution = { fieldShare, academyShare, processingFee };
+        payment.revenueDistribution = { academyShare, processingFee };
         await payment.save();
 
-        // Step 2: Credit field wallet
-        const fieldWallet = await Wallet.findOne({
-          ownerId: payment.fieldId,
-          ownerType: 'field',
-        });
+        // Step 2: Credit admin wallet
+        const adminWallet = await Wallet.findOne({ ownerType: 'admin' });
 
-        if (!fieldWallet) {
-          throw new Error('Field wallet not found');
+        if (!adminWallet) {
+          throw new Error('Platform wallet not found');
         }
 
-        fieldWallet.transactions.push({
-          type: 'income',
-          description: `Field share from payment ${payment._id}`,
-          amount: fieldShare,
-          currency: 'RWF',
-          status: 'completed',
-          reference: String(payment._id),
-          createdAt: new Date(),
-        });
-        fieldWallet.balance += fieldShare;
-        await fieldWallet.save();
-
-        // Step 3: Credit umbrella wallet
-        const umbrellaWallet = await Wallet.findOne({ ownerType: 'umbrella' });
-
-        if (!umbrellaWallet) {
-          throw new Error('Umbrella wallet not found');
-        }
-
-        umbrellaWallet.transactions.push({
+        adminWallet.transactions.push({
           type: 'income',
           description: `Academy share from payment ${payment._id}`,
           amount: academyShare,
@@ -166,10 +134,10 @@ router.put(
           reference: String(payment._id),
           createdAt: new Date(),
         });
-        umbrellaWallet.balance += academyShare;
-        await umbrellaWallet.save();
+        adminWallet.balance += academyShare;
+        await adminWallet.save();
 
-        // Step 4: Notify student
+        // Step 3: Notify student
         await Notification.create({
           userId: payment.studentId,
           type: 'payment-completed',

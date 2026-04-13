@@ -17,17 +17,15 @@ const router = Router();
 // Requirements 3.5, 3.6, 3.7, 3.8
 router.get('/', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId, role, fieldId } = req.user!;
+    const { userId, role } = req.user!;
     let filter: Record<string, unknown> = {};
 
     if (role === 'student') {
       filter = { studentId: userId };
     } else if (role === 'trainer') {
       filter = { trainerId: userId };
-    } else if (role === 'company-admin') {
-      filter = { fieldId };
     }
-    // umbrella-admin: no filter — return all
+    // admin: no filter — return all
 
     const roadmaps = await Roadmap.find(filter);
     res.json({ success: true, data: roadmaps });
@@ -44,7 +42,7 @@ router.post(
   requireRole('student', 'trainer'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { title, description, studentId, trainerId, fieldId, phases, difficulty, estimatedDuration } =
+      const { title, description, studentId, trainerId, phases, difficulty, estimatedDuration } =
         req.body;
 
       const roadmap = await Roadmap.create({
@@ -52,7 +50,6 @@ router.post(
         description,
         studentId,
         trainerId,
-        fieldId,
         phases,
         difficulty,
         estimatedDuration,
@@ -140,7 +137,7 @@ router.post(
 router.put(
   '/:id/approve',
   authenticate,
-  requireRole('company-admin', 'umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { approved, approvalNotes } = req.body as { approved: boolean; approvalNotes?: string };

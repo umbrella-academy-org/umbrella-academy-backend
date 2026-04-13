@@ -8,7 +8,7 @@ const router = Router();
 router.get(
   '/pending',
   authenticate,
-  requireRole('company-admin', 'umbrella-admin'),
+  requireRole('admin'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const filter: Record<string, unknown> = {
@@ -16,10 +16,7 @@ router.get(
         approvalStatus: 'pending',
       };
 
-      if (req.user!.role === 'field-admin') {
-        filter.fieldId = req.user!.fieldId;
-      }
-      // umbrella-admin: no fieldId filter — returns all pending trainers
+      // admin: no fieldId filter — returns all pending trainers
 
       const users = await User.find(filter).select('-password');
 

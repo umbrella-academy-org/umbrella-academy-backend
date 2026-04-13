@@ -8,7 +8,6 @@ import './seed/seedOwner';
 
 import authRoutes from './routes/auth';
 import fileRoutes from './routes/files';
-import fieldRoutes from './routes/fields';
 import userRoutes from './routes/users';
 import trainerRoutes from './routes/trainers';
 import roadmapRoutes from './routes/roadmaps';
@@ -20,21 +19,6 @@ import statsRoutes from './routes/stats';
 import notificationRoutes from './routes/notifications';
 import systemRoutes from './routes/system';
 import adminRoutes from './routes/admin';
-import companyRoutes from './routes/companies';
-
-import Field from './models/Field';
-import Wallet from './models/Wallet';
-
-Field.schema.post('save', async function (doc: any) {
-  try {
-    const exists = await Wallet.findOne({ ownerId: doc._id, ownerType: 'field' });
-    if (!exists) {
-      await Wallet.create({ ownerId: doc._id, ownerType: 'field', balance: 0, currency: 'RWF' });
-    }
-  } catch (err) {
-    console.error('Failed to auto-create wallet for field:', err);
-  }
-});
 
 const app = express();
 
@@ -47,13 +31,12 @@ app.use(express.json());
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ success: true, message: 'Umbrella Academy API is running' });
+  res.json({ success: true, message: 'Dreamize API is running' });
 });
 
-// Mount route groups under /api (Requirement 11.6)
+// Mount route groups under /api
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
-app.use('/api/fields', fieldRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/trainers', trainerRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
@@ -65,7 +48,6 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/companies', companyRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

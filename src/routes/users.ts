@@ -22,12 +22,11 @@ router.put('/profile', authenticate, requireRole('student'), async (req: Request
 });
 
 // GET /users — admin scoped
-router.get('/', authenticate, requireRole('company-admin', 'umbrella-admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/', authenticate, requireRole('admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { role } = req.query as { role?: string };
     const filter: Record<string, unknown> = {};
     if (role) filter.role = role;
-    if (req.user!.role === 'company-admin') filter.fieldId = req.user!.fieldId;
 
     const users = await User.find(filter).select('-password');
     res.json({ success: true, data: users });
@@ -35,7 +34,7 @@ router.get('/', authenticate, requireRole('company-admin', 'umbrella-admin'), as
 });
 
 // PUT /users/:id/status
-router.put('/:id/status', authenticate, requireRole('company-admin', 'umbrella-admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/:id/status', authenticate, requireRole('admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { status } = req.body as { status: 'active' | 'inactive' | 'suspended' };
     if (!['active', 'inactive', 'suspended'].includes(status)) {
@@ -48,10 +47,10 @@ router.put('/:id/status', authenticate, requireRole('company-admin', 'umbrella-a
 });
 
 // POST /users — create user
-router.post('/', authenticate, requireRole('umbrella-admin', 'company-admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/', authenticate, requireRole('admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password, role, firstName, lastName, fieldId } = req.body as {
-      email?: string; password?: string; role?: string; firstName?: string; lastName?: string; fieldId?: string;
+    const { email, password, role, firstName, lastName } = req.body as {
+      email?: string; password?: string; role?: string; firstName?: string; lastName?: string;
     };
 
     if (!email || !password || !role || !firstName || !lastName) {
@@ -62,14 +61,14 @@ router.post('/', authenticate, requireRole('umbrella-admin', 'company-admin'), a
     if (existing) { res.status(400).json({ success: false, message: 'A user with that email already exists' }); return; }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, password: hashedPassword, role, firstName, lastName, fieldId: fieldId ?? '', status: 'active', isVerified: true });
+    const user = await User.create({ email, password: hashedPassword, role, firstName, lastName, status: 'active', isVerified: true });
     const userWithoutPassword = await User.findById(user._id).select('-password');
     res.status(201).json({ success: true, data: userWithoutPassword });
   } catch (err) { next(err); }
 });
 
 // PUT /users/:id — update user profile
-router.put('/:id', authenticate, requireRole('umbrella-admin', 'company-admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/:id', authenticate, requireRole('admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { password: _password, ...updateFields } = req.body;
     const updated = await User.findByIdAndUpdate(req.params.id, updateFields, { new: true, runValidators: true }).select('-password');
@@ -78,12 +77,12 @@ router.put('/:id', authenticate, requireRole('umbrella-admin', 'company-admin'),
   } catch (err) { next(err); }
 });
 
-// DELETE /users/:id — umbrella-admin only
-router.delete('/:id', authenticate, requireRole('umbrella-admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// DELETE /users/:id — admin only
+router.delete('/:id', authenticate, requireRole('admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) { res.status(404).json({ success: false, message: 'User not found' }); return; }
-    if (target.role === 'umbrella-admin') { res.status(403).json({ success: false, message: 'Cannot delete an umbrella-admin account' }); return; }
+    if (target.role === 'admin') { res.status(403).json({ success: false, message: 'Cannot delete an admin account' }); return; }
     await User.findByIdAndDelete(req.params.id);
     res.json({ success: true, data: null });
   } catch (err) { next(err); }

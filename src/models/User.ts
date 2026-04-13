@@ -1,6 +1,6 @@
 import { Schema, model, Document } from 'mongoose';
 
-export type UserRole = 'student' | 'trainer' | 'company-admin' | 'umbrella-admin';
+export type UserRole = 'student' | 'trainer' | 'admin';
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 
 export interface IAvailability {
@@ -25,8 +25,6 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
-  fieldId?: string;
-  companyId?: string;
   status: UserStatus;
   avatar?: string;
   isVerified: boolean;
@@ -94,11 +92,9 @@ const userSchema = new Schema<IUser>(
     isVerified: { type: Boolean, default: false },
     role: {
       type: String,
-      enum: ['student', 'trainer', 'company-admin', 'umbrella-admin'],
+      enum: ['student', 'trainer', 'admin'],
       required: true,
     },
-    fieldId: { type: String, default: '' },
-    companyId: { type: String, default: '' },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended'],

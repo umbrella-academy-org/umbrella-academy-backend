@@ -16,7 +16,7 @@ router.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { userId, role, fieldId } = req.user!;
+      const { userId, role } = req.user!;
       const userObjectId = new Types.ObjectId(userId);
       const now = new Date();
 
@@ -79,45 +79,9 @@ router.get(
         });
       }
 
-      // Requirement 9.3 — Company-admin stats
-      if (role === 'company-admin') {
-        if (!fieldId) {
-          res.status(400).json({ success: false, message: 'No fieldId associated with this user' });
-          return;
-        }
-
-
-
-        const [totalStudents, totalTrainers, totalFieldRevenueAgg, activeRoadmaps] =
-          await Promise.all([
-            User.countDocuments({ role: 'student', fieldId: fieldId }),
-            User.countDocuments({ role: 'trainer', fieldId: fieldId }),
-            Payment.aggregate([
-              { $match: { fieldId: fieldId, status: 'completed' } },
-              {
-                $group: {
-                  _id: null,
-                  total: { $sum: '$revenueDistribution.fieldShare' },
-                },
-              },
-            ]),
-            Roadmap.countDocuments({
-              fieldId: fieldId,
-              status: { $in: ['active', 'approved'] },
-            }),
-          ]);
-
-        const totalFieldRevenue = totalFieldRevenueAgg[0]?.total ?? 0;
-
-        return res.json({
-          success: true,
-          data: { totalStudents, totalTrainers, totalFieldRevenue, activeRoadmaps },
-        });
-      }
-
-      // Requirement 9.5 — Umbrella-admin stats
-      if (role === 'umbrella-admin') {
-        const roles = ['student', 'trainer', 'company-admin', 'umbrella-admin'];
+      // Requirement 9.5 — Admin stats
+      if (role === 'admin') {
+        const roles = ['student', 'trainer', 'admin'];
 
         const [userCountsByRole, totalRevenueAgg, activeRoadmaps, completedSessions] =
           await Promise.all([
