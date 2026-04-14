@@ -5,6 +5,56 @@ export type PhaseStatus = 'pending' | 'active' | 'completed';
 export type SessionStatus = 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
 
+export enum BookingStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  COMPLETED = 'completed'
+}
+
+export enum RoadmapStepStatus {
+  LOCKED = 'locked',
+  ACTIVE = 'active',
+  COMPLETED = 'completed'
+}
+
+export interface OrientationBooking {
+  id: string;
+  studentId: string;
+  trainerId: string;           // Selected mentor
+  requestedTime: Date;
+  alternativeTime?: Date;
+  learningGoals: string;       // Message field
+  status: BookingStatus;
+  rejectionReason?: string;
+  meetingLink?: string;        // Generated after approval
+  createdAt: Date;
+}
+export interface Milestone {
+  id: string;
+  roadmapId: string;
+  title: string;               // e.g., "Web Fundamentals"
+  description: string;
+  skillsToLearn: string[];
+  tasks: string[];
+  requiredProjects: string[];   // List of project descriptions/titles
+  estimatedDurationDays: number;
+  order: number;
+  status: RoadmapStepStatus;
+  completedAt: Date | null;
+  trainerFeedback?: string;
+}
+
+export interface Roadmap {
+  id: string;
+  studentId: string;
+  trainerId: string;
+  title: string; // e.g., "Full Stack Developer Path"
+  milestones: Milestone[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ISession {
   title?: string;
   description?: string;
