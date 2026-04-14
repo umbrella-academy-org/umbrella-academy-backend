@@ -23,35 +23,33 @@ export interface Availability {
 }
 
 export interface OnboardingChecklist {
-  accountCreated: boolean; // Always true after signup
+  accountCreated: boolean; 
   orientationBooked: boolean;
   roadmapReceived: boolean;
   learningStarted: boolean;
 }
 
 export interface Experience {
-  yearsOfExperience?: number;
-  specializations?: string[];
+  yearsOfExperience: number;
+  specializations: string[];
 }
 
 export interface BaseUser extends Document {
   email: string;
-  password: string; 
+  password: string;
   firstName: string;
   lastName: string;
-  phone?: string;
-  phoneCode?: string;
-  phoneNumber?: string;
+  phoneNumber: string;
   role: UserRole;
   isActive: boolean;
   status: string;
-  gender?: string;
-  dateOfBirth?: Date;
+  gender: string;
+  dateOfBirth: Date;
   isVerified: boolean;
-  otpCode?: string;
-  otpExpiry?: Date;
-  resetToken?: string;
-  resetTokenExpiry?: Date;
+  otpCode: string;
+  otpExpiry: Date;
+  resetToken: string;
+  resetTokenExpiry: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,23 +71,15 @@ export interface Student extends BaseUser {
   onboardingStatus: OnboardingChecklist;
   assignedTrainerId: string | null;
   currentRoadmapId: string | null;
-  educationLevel?: string;
 }
 
 export interface Trainer extends BaseUser {
   role: UserRole.TRAINER;
-  cvUrl?: string;           
-  experience?: Experience;
-  skills?: string[];        
-  availabilityCalendar?: Availability;
-  bio?: string;
-  educationLevel?: string;
-  educationTitle?: string;
-  school?: string;
-  yearOfCompletion?: string;
-  availability?: string;
-  proofDocuments?: string[];
-  approvalStatus?: 'pending' | 'approved' | 'rejected' | null;
+  cvUrl: string;
+  experience: Experience;
+  skills: string[];
+  availability: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected'
 }
 
 export interface TrainerApplicationForm {
@@ -97,10 +87,10 @@ export interface TrainerApplicationForm {
   email: string;
   phone: string;
   password: string;
-  cvUrl: string;           
+  cvUrl: string;
   experience: Experience;
-  skills: string[];        
-  availabilityCalendar: string; 
+  skills: string[];
+  availability: string;
   introVideoUrl: string;
 }
 
@@ -111,7 +101,7 @@ export interface PublicStudentProfile {
   avatarUrl: string;
   certificates: Certificate[];
   approvedProjects: Project[];
-  mentorFeedback: string[];     // Array of testimonials
+  trainerFeedback: string[];
 }
 
 // Mongoose Base User Schema
@@ -120,8 +110,6 @@ const userSchema = new Schema<BaseUser>({
   password: { type: String, required: true },
   firstName: { type: String, required: true, trim: true },
   lastName: { type: String, required: true, trim: true },
-  phone: { type: String },
-  phoneCode: { type: String },
   phoneNumber: { type: String },
   role: { type: String, enum: Object.values(UserRole), required: true },
   isActive: { type: Boolean, default: true },
@@ -137,7 +125,7 @@ const userSchema = new Schema<BaseUser>({
 
 
 // Student Discriminator
-const studentSchema = new Schema({
+const studentSchema = new Schema<Student>({
   guardianIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   hasPaidOrientation: { type: Boolean, default: false },
   hasActiveSubscription: { type: Boolean, default: false },
@@ -150,44 +138,32 @@ const studentSchema = new Schema({
   },
   assignedTrainerId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   currentRoadmapId: { type: Schema.Types.ObjectId, ref: 'Roadmap', default: null },
-  educationLevel: { type: String },
 });
 
 // Trainer Discriminator
-const trainerSchema = new Schema({
+const trainerSchema = new Schema<Trainer>({
   cvUrl: { type: String },
   experience: {
     yearsOfExperience: { type: Number },
     specializations: [String]
   },
   skills: [String],
-  availabilityCalendar: {
-    weeklyAvailableHours: { type: Number },
-    preferredTimeSlots: [String],
-    preferredDays: [String]
-  },
-  bio: { type: String },
-  educationLevel: { type: String },
-  educationTitle: { type: String },
-  school: { type: String },
-  yearOfCompletion: { type: String },
   availability: { type: String },
-  proofDocuments: [{ type: String }],
-  approvalStatus: { 
-    type: String, 
-    enum: ['pending', 'approved', 'rejected', null], 
-    default: null 
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', null],
+    default: null
   }
 });
 
 
 // Guardian Discriminator
-const guardianSchema = new Schema({
+const guardianSchema = new Schema<Guardian>({
   linkedStudentIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  inviteState: { 
-    type: String, 
-    enum: Object.values(GuardianInviteState), 
-    default: GuardianInviteState.INVITED 
+  inviteState: {
+    type: String,
+    enum: Object.values(GuardianInviteState),
+    default: GuardianInviteState.INVITED
   },
   inviteSentAt: { type: Date, default: Date.now },
   passwordSetAt: { type: Date, default: null }
