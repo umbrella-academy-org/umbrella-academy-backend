@@ -2,14 +2,13 @@ import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import User, { UserRole } from '../models/User';
-import Wallet from '../models/Wallet';
+import User, { Student, StudentModel, TrainerModel } from '../models/User';
 import { authenticate, requireRole } from '../middleware/auth';
 import { sendEmail } from '../services/emailService';
+import { ApiResponse } from '@/interfaces/api';
 
 const router = Router();
 
-const VALID_ROLES: UserRole[] = ['student', 'trainer', 'admin'];
 
 function signToken(userId: string, role: string): string {
   const secret = process.env.JWT_SECRET as string;
@@ -19,45 +18,29 @@ function signToken(userId: string, role: string): string {
 // POST /api/auth/register/student
 router.post('/register/student', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const {
-      email, password, firstName, lastName,
-      gender, dateOfBirth, phoneCode, phoneNumber, educationLevel,
-    } = req.body;
+    const student = req.body as unknown as Student;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(student.password, 10);
+    student.password = hashedPassword
 
-    const user = await User.create({
-      email,
-      password: hashedPassword,
-      role: 'student',
-      firstName,
-      lastName,
-      status: 'active',
-      gender: gender || undefined,
-      dateOfBirth: dateOfBirth || undefined,
-      phoneCode: phoneCode || undefined,
-      phoneNumber: phoneNumber || undefined,
-      educationLevel: educationLevel || undefined,
-      isVerified: false,
-    });
+    const savedStudent = await StudentModel.create(student)
 
-    const token = signToken(String(user._id), user.role);
 
-    return res.status(201).json({
+    const token = signToken(String(savedStudent._id), savedStudent.role);
+    const response: ApiResponse = {
       success: true,
-      token,
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-      },
-    });
+      message: "Student registered successfully",
+      data: {
+        token,
+        user: savedStudent.toJSON()
+      }
+    }
+
+    return res.status(201).json(response);
+
   } catch (err: any) {
     if (err.code === 11000) {
-      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+      return res.status(200).json({ success: false, message: 'An account with this email already exists.' });
     }
     next(err);
   }
@@ -66,40 +49,25 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
 // POST /api/auth/register/trainer
 router.post('/register/trainer', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const {
-      email, password, firstName, lastName,
-      bio, educationLevel, educationTitle, school, yearOfCompletion,
-      availability, proofDocuments,
-    } = req.body;
+    const trainer = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(trainer.password, 10);
+    trainer.password = hashedPassword
 
-    const user = await User.create({
-      email,
-      password: hashedPassword,
-      role: 'trainer',
-      firstName,
-      lastName,
-      status: 'inactive',
-      approvalStatus: 'pending',
-      bio: bio || undefined,
-      educationLevel: educationLevel || undefined,
-      educationTitle: educationTitle || undefined,
-      school: school || undefined,
-      yearOfCompletion: yearOfCompletion || undefined,
-      availability: availability || undefined,
-      proofDocuments: proofDocuments || [],
-      isVerified: false,
-    });
 
-    await Wallet.create({
-      ownerId: user._id,
-      ownerType: 'trainer',
-      balance: 0,
-      currency: 'RWF',
-    });
+    const savedTrainer = await TrainerModel.create(trainer)
 
-    return res.status(201).json({ success: true, pending: true });
+    const token = signToken(String(savedTrainer._id), savedTrainer.role);
+    const response: ApiResponse = {
+      success: true,
+      message: "Trainer registered successfully",
+      data: {
+        token,
+        user: savedTrainer.toJSON()
+      }
+    }
+
+    return res.status(201).json(response);
   } catch (err: any) {
     console.error(err);
     if (err.code === 11000) {
@@ -348,88 +316,27 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     // Block unapproved trainers
-    if (
-      user.role === 'trainer' &&
-      user.approvalStatus !== null &&
-      user.approvalStatus !== undefined &&
-      user.approvalStatus !== 'approved'
-    ) {
-      return res.status(403).json({ success: false, message: 'Your application is pending approval.' });
+    if (user instanceof TrainerModel && user.approvalStatus !== 'approved') {
+      return res.status(200).json({ success: false, message: 'Your application is pending approval.' });
     }
 
     const token = signToken(String(user._id), user.role);
 
-    return res.status(200).json({
+    const response: ApiResponse = {
       success: true,
-      token,
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-      },
-    });
+      message: "Login successful",
+      data: {
+        token,
+        user
+
+      }
+    }
+
+    return res.status(200).json(response);
   } catch (err) {
     next(err);
   }
 });
 
-// POST /api/auth/register — generic (backward compat)
-router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, password, role, firstName, lastName } = req.body;
-
-    if (!VALID_ROLES.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`,
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      email,
-      password: hashedPassword,
-      role,
-      firstName,
-      lastName,
-    });
-
-    if (role === 'trainer') {
-      await Wallet.create({
-        ownerId: user._id,
-        ownerType: 'trainer',
-        balance: 0,
-        currency: 'RWF',
-      });
-    }
-
-    const token = signToken(String(user._id), user.role);
-
-    return res.status(201).json({
-      success: true,
-      token,
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-      },
-    });
-  } catch (err: any) {
-    if (err.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message: 'An account with this email already exists.',
-      });
-    }
-    next(err);
-  }
-});
 
 export default router;

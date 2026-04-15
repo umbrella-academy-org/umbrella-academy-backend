@@ -17,9 +17,9 @@ export enum GuardianInviteState {
 }
 
 export interface Availability {
-  weeklyAvailableHours?: number;
-  preferredTimeSlots?: string[];
-  preferredDays?: string[];
+  weeklyAvailableHours: number;
+  preferredTimeSlots: string[];
+  preferredDays: string[];
 }
 
 export interface OnboardingChecklist {
@@ -142,6 +142,7 @@ const studentSchema = new Schema<Student>({
 
 // Trainer Discriminator
 const trainerSchema = new Schema<Trainer>({
+
   cvUrl: { type: String },
   experience: {
     yearsOfExperience: { type: Number },
@@ -151,8 +152,8 @@ const trainerSchema = new Schema<Trainer>({
   availability: { type: String },
   approvalStatus: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', null],
-    default: null
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   }
 });
 
@@ -168,6 +169,7 @@ const guardianSchema = new Schema<Guardian>({
   inviteSentAt: { type: Date, default: Date.now },
   passwordSetAt: { type: Date, default: null }
 });
+
 // Base Model
 export const UserModel = model<BaseUser>('User', userSchema);
 export const GuardianModel = UserModel.discriminator<Guardian>(UserRole.GUARDIAN, guardianSchema);
