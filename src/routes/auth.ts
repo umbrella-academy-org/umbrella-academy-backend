@@ -29,7 +29,7 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
       phoneNumber: guardianPhoneNumber,
       lastName: "unknown",
       password: "unknown",
-      
+
     }
 
     const savedGuardian = await GuardianModel.create(guardian)
@@ -95,7 +95,6 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
   try {
     const { email } = req.body;
     const user = await User.findOne({ email: email?.toLowerCase() });
-
     if (user) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const hashedOtp = await bcrypt.hash(otp, 10);
@@ -110,8 +109,8 @@ router.post('/send-otp', async (req: Request, res: Response, next: NextFunction)
           subject: 'Your Dreamize Verification Code',
           message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
         });
-      } catch {
-        console.error('Error sending OTP');
+      } catch (error) {
+        console.error('Error sending OTP', error);
       }
     }
 
@@ -129,19 +128,19 @@ router.post('/verify-otp', async (req: Request, res: Response, next: NextFunctio
     const user = await User.findOne({ email: email?.toLowerCase() });
 
     if (!user || !user.otpCode || !user.otpExpiry) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      return res.status(200).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
     if (user.otpExpiry < new Date()) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      return res.status(200).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
     const isValid = await bcrypt.compare(otp, user.otpCode);
     if (!isValid) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      return res.status(200).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
-    await User.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 } }, { new: true });
+    await User.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 }, isVerified: true }, { new: true });
 
     return res.status(200).json({ success: true, verified: true });
   } catch (err) {
@@ -316,21 +315,33 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      return res.status(200).json({
+        success: false,
+        message: 'Invalid email or password.'
+      });
     }
 
     if (!user.isVerified) {
-      return res.status(403).json({ success: false, message: 'Your email is not verified. Please verify your email to login.' });
+      return res.status(200).json({
+        success: false,
+        message: 'Your email is not verified. Please verify your email to login.'
+      });
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      return res.status(200).json({
+        success: false,
+        message: 'Invalid email or password.'
+      });
     }
 
     // Block unapproved trainers
     if (user instanceof TrainerModel && user.approvalStatus !== 'approved') {
-      return res.status(200).json({ success: false, message: 'Your application is pending approval.' });
+      return res.status(200).json({
+        success: false,
+        message: 'Your application is pending approval.'
+      });
     }
 
     const token = signToken(String(user._id), user.role);
@@ -341,7 +352,6 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       data: {
         token,
         user
-
       }
     }
 
