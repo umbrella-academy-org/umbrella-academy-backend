@@ -76,6 +76,7 @@ export interface Student extends BaseUser {
 export interface Trainer extends BaseUser {
   role: UserRole.TRAINER;
   cvUrl: string;
+  introVideoUrl: string;
   experience: Experience;
   skills: string[];
   availability: Availability;
