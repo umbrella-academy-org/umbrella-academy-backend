@@ -1,10 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
-import Roadmap from '../models/Roadmap';
-import LiveSession from '../models/LiveSession';
-import User from '../models/User';
-import Payment from '../models/Payment';
+import { UserModel } from '../models/User';
+import { PaymentModel } from '../models/Payment';
 import { Types } from 'mongoose';
+import { RoadmapModel } from '../models/Roadmap';
 
 const router = Router();
 
@@ -19,24 +18,16 @@ router.get(
       const userObjectId = new Types.ObjectId(userId);
       const now = new Date();
 
-      // Requirement 9.1 — Student stats
+      // Requirement 9.1 - Student stats
       if (role === 'student') {
-        const [activeRoadmaps, completedSessions, upcomingSessions, roadmapProgressAgg] =
+        const [activeRoadmaps, roadmapProgressAgg] =
           await Promise.all([
-            Roadmap.countDocuments({
-              studentId: userObjectId,
+            RoadmapModel.countDocuments({
+              studentId: userId,
               status: { $in: ['active', 'approved'] },
             }),
-            LiveSession.countDocuments({
-              studentId: userObjectId,
-              status: 'completed',
-            }),
-            LiveSession.countDocuments({
-              studentId: userObjectId,
-              scheduledAt: { $gt: now },
-            }),
-            Roadmap.aggregate([
-              { $match: { studentId: userObjectId } },
+            RoadmapModel.aggregate([
+              { $match: { studentId: userId } },
               { $group: { _id: null, avg: { $avg: '$progress.overallProgress' } } },
             ]),
           ]);
@@ -45,52 +36,43 @@ router.get(
 
         return res.json({
           success: true,
-          data: { activeRoadmaps, completedSessions, upcomingSessions, roadmapProgress },
+          data: { activeRoadmaps, roadmapProgress },
         });
       }
 
       // Requirement 9.2 — Trainer stats
       if (role === 'trainer') {
-        const [assignedStudentsAgg, totalSessionsConducted, upcomingSessions] =
+        const [assignedStudentsAgg] =
           await Promise.all([
-            Roadmap.aggregate([
-              { $match: { trainerId: userObjectId } },
+            RoadmapModel.aggregate([
+              { $match: { trainerId: userId } },
               { $group: { _id: '$studentId' } },
               { $count: 'count' },
             ]),
-            LiveSession.countDocuments({
-              trainerId: userObjectId,
-              status: 'completed',
-            }),
-            LiveSession.countDocuments({
-              trainerId: userObjectId,
-              scheduledAt: { $gt: now },
-            }),
           ]);
 
         const assignedStudents = assignedStudentsAgg[0]?.count ?? 0;
 
         return res.json({
           success: true,
-          data: { assignedStudents, totalSessionsConducted, upcomingSessions },
+          data: { assignedStudents },
         });
       }
 
-      // Requirement 9.5 — Admin stats
+      // Requirement 9.5 - Admin stats
       if (role === 'admin') {
         const roles = ['student', 'trainer', 'admin'];
 
-        const [userCountsByRole, totalRevenueAgg, activeRoadmaps, completedSessions] =
+        const [userCountsByRole, totalRevenueAgg, activeRoadmaps] =
           await Promise.all([
-            User.aggregate([
+            UserModel.aggregate([
               { $group: { _id: '$role', count: { $sum: 1 } } },
             ]),
-            Payment.aggregate([
-              { $match: { status: 'completed' } },
+            PaymentModel.aggregate([
+              { $match: { status: 'success' } },
               { $group: { _id: null, total: { $sum: '$amount' } } },
             ]),
-            Roadmap.countDocuments({ status: { $in: ['active', 'approved'] } }),
-            LiveSession.countDocuments({ status: 'completed' }),
+            RoadmapModel.countDocuments({ status: { $in: ['active', 'approved'] } }),
           ]);
 
         const totalUsersByRole: Record<string, number> = {};
@@ -103,7 +85,7 @@ router.get(
 
         return res.json({
           success: true,
-          data: { totalUsersByRole, totalRevenue, activeRoadmaps, completedSessions },
+          data: { totalUsersByRole, totalRevenue, activeRoadmaps },
         });
       }
 

@@ -1,9 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
-import User from '../models/User';
-import Payment from '../models/Payment';
-import Roadmap from '../models/Roadmap';
-import LiveSession from '../models/LiveSession';
+import { UserModel } from '../models/User';
+import { PaymentModel } from '../models/Payment';
+import { RoadmapModel } from '../models/Roadmap';
 
 const router = Router();
 
@@ -16,13 +15,13 @@ router.get(
     try {
       // User counts by role
       const [studentCount, trainerCount] = await Promise.all([
-        User.countDocuments({ role: 'student' }),
-        User.countDocuments({ role: 'trainer' }),
+        UserModel.countDocuments({ role: 'student' }),
+        UserModel.countDocuments({ role: 'trainer' }),
       ]);
 
       // Total revenue from completed payments
-      const totalRevenueAgg = await Payment.aggregate([
-        { $match: { status: 'completed' } },
+      const totalRevenueAgg = await PaymentModel.aggregate([
+        { $match: { status: 'success' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]);
       const totalRevenue = totalRevenueAgg[0]?.total ?? 0;
@@ -30,17 +29,14 @@ router.get(
       // Monthly revenue (current calendar month)
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthlyRevenueAgg = await Payment.aggregate([
-        { $match: { status: 'completed', processedAt: { $gte: startOfMonth } } },
+      const monthlyRevenueAgg = await PaymentModel.aggregate([
+        { $match: { status: 'success', paidAt: { $gte: startOfMonth } } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]);
       const monthlyRevenue = monthlyRevenueAgg[0]?.total ?? 0;
 
       // Active roadmaps
-      const activeRoadmaps = await Roadmap.countDocuments({ status: 'active' });
-
-      // Completed live sessions
-      const completedSessions = await LiveSession.countDocuments({ status: 'completed' });
+      const activeRoadmaps = await RoadmapModel.countDocuments({ status: 'active' });
 
       res.json({
         success: true,
@@ -52,7 +48,6 @@ router.get(
           totalRevenue,
           monthlyRevenue,
           activeRoadmaps,
-          completedSessions,
         },
       });
     } catch (err) {
