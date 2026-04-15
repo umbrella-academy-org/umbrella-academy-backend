@@ -78,7 +78,7 @@ export interface Trainer extends BaseUser {
   cvUrl: string;
   experience: Experience;
   skills: string[];
-  availability: string;
+  availability: Availability;
   approvalStatus: 'pending' | 'approved' | 'rejected'
 }
 
@@ -149,7 +149,7 @@ const trainerSchema = new Schema<Trainer>({
     specializations: [String]
   },
   skills: [String],
-  availability: { type: String },
+  availability: { type: Object },
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
