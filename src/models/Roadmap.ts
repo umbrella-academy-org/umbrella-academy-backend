@@ -18,26 +18,27 @@ export enum RoadmapStepStatus {
   COMPLETED = 'completed'
 }
 
-export interface OrientationBooking {
+export interface OrientationBooking extends Document {
   id: string;
   studentId: string;
-  trainerId: string;           // Selected mentor
+  trainerId: string;
   requestedTime: Date;
   alternativeTime?: Date;
-  learningGoals: string;       // Message field
+  learningGoals: string;
   status: BookingStatus;
   rejectionReason?: string;
-  meetingLink?: string;        // Generated after approval
+  meetingLink?: string;
   createdAt: Date;
 }
+
 export interface Milestone {
   id: string;
   roadmapId: string;
-  title: string;               // e.g., "Web Fundamentals"
+  title: string;
   description: string;
   skillsToLearn: string[];
   tasks: string[];
-  requiredProjects: string[];   // List of project descriptions/titles
+  requiredProjects: string[];
   estimatedDurationDays: number;
   order: number;
   status: RoadmapStepStatus;
@@ -45,128 +46,66 @@ export interface Milestone {
   trainerFeedback?: string;
 }
 
-export interface Roadmap {
+export interface Roadmap extends Document {
   id: string;
   studentId: string;
   trainerId: string;
-  title: string; // e.g., "Full Stack Developer Path"
+  title: string;
   milestones: Milestone[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ISession {
-  title?: string;
-  description?: string;
-  duration?: number; // hours
-  scheduledAt?: Date;
-  completedAt?: Date;
-  status?: SessionStatus;
-  materials?: string[];
-  objectives?: string[];
-}
-
-export interface IPhase {
-  title?: string;
-  description?: string;
-  objectives?: string[];
-  estimatedHours?: number;
-  status: PhaseStatus;
-  order?: number;
-  sessions?: ISession[];
-}
-
-export interface IProgress {
-  overallProgress: number;
-  completedPhases: number;
-  totalPhases: number;
-  completedSessions: number;
-  totalSessions: number;
-}
-
-export interface IRoadmap extends Document {
-  title: string;
-  description?: string;
-  studentId: Types.ObjectId;
-  trainerId?: Types.ObjectId;
-  status: RoadmapStatus;
-  difficulty?: Difficulty;
-  estimatedDuration?: number; // weeks
-  approvalNotes?: string;
-  approvedAt?: Date;
-  phases?: IPhase[];
-  progress: IProgress;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const sessionSchema = new Schema<ISession>(
-  {
-    title: { type: String },
-    description: { type: String },
-    duration: { type: Number },
-    scheduledAt: { type: Date },
-    completedAt: { type: Date },
-    status: {
-      type: String,
-      enum: ['pending', 'scheduled', 'in-progress', 'completed', 'cancelled'],
-    },
-    materials: [{ type: String }],
-    objectives: [{ type: String }],
+// Schemas
+const MilestoneSchema = new Schema<Milestone>({
+  id: { type: String, required: true },
+  roadmapId: { type: String, required: true },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  skillsToLearn: [{ type: String, required: true }],
+  tasks: [{ type: String, required: true }],
+  requiredProjects: [{ type: String, required: true }],
+  estimatedDurationDays: { type: Number, required: true },
+  order: { type: Number, required: true },
+  status: { 
+    type: String, 
+    enum: Object.values(RoadmapStepStatus), 
+    required: true 
   },
-  { _id: true }
-);
+  completedAt: { type: Date, default: null },
+  trainerFeedback: { type: String, default: undefined }
+});
 
-const phaseSchema = new Schema<IPhase>(
-  {
-    title: { type: String },
-    description: { type: String },
-    objectives: [{ type: String }],
-    estimatedHours: { type: Number },
-    status: {
-      type: String,
-      enum: ['pending', 'active', 'completed'],
-      default: 'pending',
-    },
-    order: { type: Number },
-    sessions: [sessionSchema],
+const RoadmapSchema = new Schema<Roadmap>({
+  id: { type: String, required: true },
+  studentId: { type: String, required: true },
+  trainerId: { type: String, required: true },
+  title: { type: String, required: true },
+  milestones: [MilestoneSchema],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const OrientationBookingSchema = new Schema<OrientationBooking>({
+  id: { type: String, required: true },
+  studentId: { type: String, required: true },
+  trainerId: { type: String, required: true },
+  requestedTime: { type: Date, required: true },
+  alternativeTime: { type: Date, default: undefined },
+  learningGoals: { type: String, required: true },
+  status: { 
+    type: String, 
+    enum: Object.values(BookingStatus), 
+    required: true 
   },
-  { _id: true }
-);
+  rejectionReason: { type: String, default: undefined },
+  meetingLink: { type: String, default: undefined },
+  createdAt: { type: Date, default: Date.now }
+});
 
-const progressSchema = new Schema<IProgress>(
-  {
-    overallProgress: { type: Number, default: 0 },
-    completedPhases: { type: Number, default: 0 },
-    totalPhases: { type: Number, default: 0 },
-    completedSessions: { type: Number, default: 0 },
-    totalSessions: { type: Number, default: 0 },
-  },
-  { _id: false }
-);
+// Models
+export const RoadmapModel = model<Roadmap>('Roadmap', RoadmapSchema);
+export const OrientationBookingModel = model<OrientationBooking>('OrientationBooking', OrientationBookingSchema);
 
-const roadmapSchema = new Schema<IRoadmap>(
-  {
-    title: { type: String, required: true },
-    description: { type: String },
-    studentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    trainerId: { type: Schema.Types.ObjectId, ref: 'User' },
-    status: {
-      type: String,
-      enum: ['draft', 'pending-approval', 'approved', 'active', 'paused', 'completed', 'rejected'],
-      default: 'draft',
-    },
-    difficulty: {
-      type: String,
-      enum: ['beginner', 'intermediate', 'advanced'],
-    },
-    estimatedDuration: { type: Number },
-    approvalNotes: { type: String },
-    approvedAt: { type: Date },
-    phases: [phaseSchema],
-    progress: { type: progressSchema, default: () => ({}) },
-  },
-  { timestamps: true }
-);
 
-export default model<IRoadmap>('Roadmap', roadmapSchema);
+

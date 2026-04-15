@@ -24,6 +24,8 @@ export interface Availability {
 
 export interface OnboardingChecklist {
   accountCreated: boolean; 
+  bookingPayed: boolean;
+  subscriptionPayed: boolean;
   orientationBooked: boolean;
   roadmapReceived: boolean;
   learningStarted: boolean;

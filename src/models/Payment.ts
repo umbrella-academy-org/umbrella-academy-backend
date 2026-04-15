@@ -47,7 +47,7 @@ export interface PromoCode {
   expiresAt: Date;
 }
 
-export interface Payment {
+export interface Payment extends Document {
   id: string;
   studentId: string;
   type: PaymentType;
@@ -59,36 +59,92 @@ export interface Payment {
   paidAt: Date;
 }
 
-export interface IPayment extends Document {
-  studentId: Types.ObjectId;
-  amount: number;
-  currency: string;
-  phoneNumber: string;
-  momoTransactionId: string;
-  status: 'pending' | 'completed' | 'failed';
-  processedAt?: Date;
-  revenueDistribution?: IRevenueDistribution;
+export interface Subscription extends Document {
+  id: string;
+  studentId: string;
+  startDate: Date;
+  expiryDate: Date;
+  isActive: boolean;
+  autoRenew: boolean;
+  daysRemaining: number; // Calculated field
+  colorCode: SubscriptionColor;
+  lastReminderSent: {
+    sevenDay: boolean;
+    twoDay: boolean;
+    expired: boolean;
+  };
 }
 
-const PaymentSchema = new Schema<IPayment>(
-  {
-    studentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    amount: { type: Number, required: true },
-    currency: { type: String, default: 'RWF' },
-    phoneNumber: { type: String, required: true },
-    momoTransactionId: { type: String, required: true },
-    status: {
-      type: String,
-      enum: ['pending', 'completed', 'failed'],
-      default: 'pending',
-    },
-    processedAt: { type: Date },
-    revenueDistribution: {
-      academyShare: { type: Number },
-      processingFee: { type: Number },
-    },
-  },
-  { timestamps: true }
-);
+export interface PromoCode extends Document {
+  code: string;
+  assignedStudentEmail: string; 
+  assignedStudentId: string;
+  discountAmount: number;      
+  discountPercentage: number;  
+  isUsed: boolean;
+  usedAt: Date | null;
+  reason: string;              // Admin must record reason
+  createdByAdminId: string;
+  expiresAt: Date;
+}
 
-export default model<IPayment>('Payment', PaymentSchema);
+// Schemas
+const LastReminderSentSchema = new Schema({
+  sevenDay: { type: Boolean, default: false },
+  twoDay: { type: Boolean, default: false },
+  expired: { type: Boolean, default: false }
+});
+
+const SubscriptionSchema = new Schema<Subscription>({
+  id: { type: String, required: true },
+  studentId: { type: String, required: true },
+  startDate: { type: Date, required: true },
+  expiryDate: { type: Date, required: true },
+  isActive: { type: Boolean, required: true },
+  autoRenew: { type: Boolean, required: true },
+  daysRemaining: { type: Number, required: true },
+  colorCode: { 
+    type: String, 
+    enum: Object.values(SubscriptionColor), 
+    required: true 
+  },
+  lastReminderSent: { type: LastReminderSentSchema, default: () => ({}) }
+});
+
+const PromoCodeSchema = new Schema<PromoCode>({
+  code: { type: String, required: true, unique: true },
+  assignedStudentEmail: { type: String, required: true },
+  assignedStudentId: { type: String, required: true },
+  discountAmount: { type: Number, required: true },
+  discountPercentage: { type: Number, required: true },
+  isUsed: { type: Boolean, default: false },
+  usedAt: { type: Date, default: null },
+  reason: { type: String, required: true },
+  createdByAdminId: { type: String, required: true },
+  expiresAt: { type: Date, required: true }
+});
+
+const PaymentSchema = new Schema<Payment>({
+  id: { type: String, required: true },
+  studentId: { type: String, required: true },
+  type: { 
+    type: String, 
+    enum: Object.values(PaymentType), 
+    required: true 
+  },
+  amount: { type: Number, required: true },
+  promoCodeApplied: { type: String, default: undefined },
+  finalAmount: { type: Number, required: true },
+  transactionRef: { type: String, required: true },
+  status: { 
+    type: String, 
+    enum: ['pending', 'success', 'failed'], 
+    required: true 
+  },
+  paidAt: { type: Date, required: true }
+});
+
+// Models
+export const SubscriptionModel = model<Subscription>('Subscription', SubscriptionSchema);
+export const PromoCodeModel = model<PromoCode>('PromoCode', PromoCodeSchema);
+export const PaymentModel = model<Payment>('Payment', PaymentSchema);
