@@ -64,7 +64,7 @@ export interface Guardian extends BaseUser {
 
 export interface Student extends BaseUser {
   role: UserRole.STUDENT;
-  guardianIds: string[];
+  guardianId: string|null;
   hasPaidOrientation: boolean;
   hasActiveSubscription: boolean;
   subscriptionExpiryDate: Date | null;
@@ -127,7 +127,7 @@ const userSchema = new Schema<BaseUser>({
 
 // Student Discriminator
 const studentSchema = new Schema<Student>({
-  guardianIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  guardianId: { type: Schema.Types.ObjectId, ref: 'User' },
   hasPaidOrientation: { type: Boolean, default: false },
   hasActiveSubscription: { type: Boolean, default: false },
   subscriptionExpiryDate: { type: Date, default: null },

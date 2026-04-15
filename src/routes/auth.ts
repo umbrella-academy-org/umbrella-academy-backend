@@ -2,10 +2,11 @@ import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import User, { Student, StudentModel, TrainerModel } from '../models/User';
+import User, { Guardian, GuardianModel, Student, StudentModel, TrainerModel } from '../models/User';
 import { authenticate, requireRole } from '../middleware/auth';
 import { sendEmail } from '../services/emailService';
 import { ApiResponse } from '@/interfaces/api';
+import { StudentRegister } from '@/interfaces/auth';
 
 const router = Router();
 
@@ -18,12 +19,24 @@ function signToken(userId: string, role: string): string {
 // POST /api/auth/register/student
 router.post('/register/student', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const student = req.body as unknown as Student;
-
+    const { guardianName, guardianEmail, guardianPhoneNumber, ...studentData } = req.body as unknown as StudentRegister;
+    const student: Student = studentData as unknown as Student;
     const hashedPassword = await bcrypt.hash(student.password, 10);
     student.password = hashedPassword
+    const guardian = {
+      firstName: guardianName,
+      email: guardianEmail,
+      phoneNumber: guardianPhoneNumber,
+      lastName: "unknown",
+      password: "unknown",
+      
+    }
 
+    const savedGuardian = await GuardianModel.create(guardian)
+    student.guardianId = savedGuardian.id
     const savedStudent = await StudentModel.create(student)
+    savedGuardian.linkedStudentIds.push(savedStudent.id)
+    await savedGuardian.save()
 
 
     const token = signToken(String(savedStudent._id), savedStudent.role);
