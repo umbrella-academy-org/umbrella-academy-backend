@@ -9,7 +9,7 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  requireRole('umbrella-admin'),
+  requireRole('admin'),
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
       // Server Uptime metric

@@ -1,30 +1,19 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import User from '../models/User';
+import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
+import { TrainerController } from '../controllers/trainerController';
 
 const router = Router();
 
-// GET /trainers/pending — list pending trainers (Requirements 10.6)
-router.get(
-  '/pending',
-  authenticate,
-  requireRole('admin'),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const filter: Record<string, unknown> = {
-        role: 'trainer',
-        approvalStatus: 'pending',
-      };
+// GET /trainers/pending - list pending trainers (Requirements 10.6)
+router.get('/pending', authenticate, requireRole('admin'), TrainerController.getPendingTrainers);
 
-      // admin: no fieldId filter — returns all pending trainers
+// GET /trainers - get all trainers
+router.get('/', authenticate, TrainerController.getAllTrainers);
 
-      const users = await User.find(filter).select('-password');
+// GET /trainers/approved - get approved trainers
+router.get('/approved', TrainerController.getApprovedTrainers);
 
-      res.json({ success: true, data: users });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
+// GET /trainers/:id - get trainer by id
+router.get('/:id', authenticate, TrainerController.getTrainerById);
 
 export default router;
