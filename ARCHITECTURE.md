@@ -11,13 +11,31 @@ src/
 |   |-- statsController.ts
 |   |-- adminController.ts
 |   |-- roadmapController.ts
+|   |-- authController.ts
+|   |-- userController.ts
+|   |-- trainerController.ts
+|   |-- chatController.ts
+|   |-- fileController.ts
+|   |-- systemController.ts
 |-- services/             # Business logic and data operations
 |   |-- statsService.ts
 |   |-- roadmapService.ts
+|   |-- authService.ts
+|   |-- userService.ts
+|   |-- trainerService.ts
+|   |-- chatService.ts
+|   |-- fileService.ts
+|   |-- systemService.ts
 |-- routes/               # Route definitions and middleware
 |   |-- stats.ts
 |   |-- admin.ts
 |   |-- roadmaps.ts
+|   |-- auth.ts
+|   |-- users.ts
+|   |-- trainers.ts
+|   |-- chat.ts
+|   |-- files.ts
+|   |-- system.ts
 |-- models/              # Mongoose schemas and interfaces
 |   |-- User.ts
 |   |-- Roadmap.ts

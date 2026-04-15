@@ -48,6 +48,9 @@ export class SystemService {
 
   static async getDatabaseStats() {
     try {
+      if (!mongoose.connection.db) {
+        throw new Error('Database not connected');
+      }
       const db = mongoose.connection.db;
       const stats = await db.stats();
       
