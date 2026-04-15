@@ -4,7 +4,6 @@ import Roadmap from '../models/Roadmap';
 import LiveSession from '../models/LiveSession';
 import User from '../models/User';
 import Payment from '../models/Payment';
-import Wallet from '../models/Wallet';
 import { Types } from 'mongoose';
 
 const router = Router();
@@ -52,7 +51,7 @@ router.get(
 
       // Requirement 9.2 — Trainer stats
       if (role === 'trainer') {
-        const [assignedStudentsAgg, totalSessionsConducted, upcomingSessions, wallet] =
+        const [assignedStudentsAgg, totalSessionsConducted, upcomingSessions] =
           await Promise.all([
             Roadmap.aggregate([
               { $match: { trainerId: userObjectId } },
@@ -67,15 +66,13 @@ router.get(
               trainerId: userObjectId,
               scheduledAt: { $gt: now },
             }),
-            Wallet.findOne({ ownerId: userObjectId, ownerType: 'trainer' }),
           ]);
 
         const assignedStudents = assignedStudentsAgg[0]?.count ?? 0;
-        const walletBalance = wallet?.balance ?? 0;
 
         return res.json({
           success: true,
-          data: { assignedStudents, totalSessionsConducted, upcomingSessions, walletBalance },
+          data: { assignedStudents, totalSessionsConducted, upcomingSessions },
         });
       }
 

@@ -4,7 +4,6 @@ import User from '../models/User';
 import Payment from '../models/Payment';
 import Roadmap from '../models/Roadmap';
 import LiveSession from '../models/LiveSession';
-import FeedbackTicket from '../models/FeedbackTicket';
 
 const router = Router();
 
@@ -62,87 +61,7 @@ router.get(
   }
 );
 
-// GET /api/admin/feedback — list all tickets sorted by createdAt desc (Requirement 10.9)
-router.get(
-  '/feedback',
-  authenticate,
-  requireRole('admin'),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const tickets = await FeedbackTicket.find({})
-        .sort({ createdAt: -1 })
-        .populate('userId', 'firstName lastName email role');
 
-      res.json({ success: true, data: tickets });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
 
-// PATCH /api/admin/feedback/:id — update ticket status (Requirement 10.10)
-router.patch(
-  '/feedback/:id',
-  authenticate,
-  requireRole('admin'),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { status } = req.body as { status?: string };
-
-      const validStatuses = ['open', 'in-progress', 'resolved', 'closed'];
-      if (!status || !validStatuses.includes(status)) {
-        res.status(400).json({ success: false, message: 'Invalid or missing status value' });
-        return;
-      }
-
-      const updated = await FeedbackTicket.findByIdAndUpdate(
-        req.params.id,
-        { status },
-        { new: true, runValidators: true }
-      );
-
-      if (!updated) {
-        res.status(404).json({ success: false, message: 'Feedback ticket not found' });
-        return;
-      }
-
-      res.json({ success: true, data: updated });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// POST /api/admin/feedback/:id/response — set adminResponse (Requirement 10.11)
-router.post(
-  '/feedback/:id/response',
-  authenticate,
-  requireRole('admin'),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { response } = req.body as { response?: string };
-
-      if (!response || response.trim() === '') {
-        res.status(400).json({ success: false, message: 'response is required' });
-        return;
-      }
-
-      const updated = await FeedbackTicket.findByIdAndUpdate(
-        req.params.id,
-        { adminResponse: response },
-        { new: true, runValidators: true }
-      );
-
-      if (!updated) {
-        res.status(404).json({ success: false, message: 'Feedback ticket not found' });
-        return;
-      }
-
-      res.json({ success: true, data: updated });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
 
 export default router;

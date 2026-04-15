@@ -2,7 +2,6 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import { authenticate, requireRole } from '../middleware/auth';
 import LiveSession from '../models/LiveSession';
-import Notification from '../models/Notification';
 
 const router = Router();
 
@@ -55,22 +54,22 @@ router.post(
       // Create notifications for both participants
       const notificationMessage = `Live session "${title}" has been scheduled for ${new Date(scheduledAt).toLocaleString()}.`;
 
-      await Notification.insertMany([
-        {
-          userId: studentId,
-          type: 'session-scheduled',
-          title: 'Live Session Scheduled',
-          message: notificationMessage,
-          relatedId: session._id,
-        },
-        {
-          userId: trainerId,
-          type: 'session-scheduled',
-          title: 'Live Session Scheduled',
-          message: notificationMessage,
-          relatedId: session._id,
-        },
-      ]);
+      // await Notification.insertMany([
+      //   {
+      //     userId: studentId,
+      //     type: 'session-scheduled',
+      //     title: 'Live Session Scheduled',
+      //     message: notificationMessage,
+      //     relatedId: session._id,
+      //   },
+      //   {
+      //     userId: trainerId,
+      //     type: 'session-scheduled',
+      //     title: 'Live Session Scheduled',
+      //     message: notificationMessage,
+      //     relatedId: session._id,
+      //   },
+      // ]);
 
       res.status(201).json({ success: true, data: session });
     } catch (err) {

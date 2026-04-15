@@ -1,8 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import Roadmap, { IPhase, ISession } from '../models/Roadmap';
-import Notification from '../models/Notification';
 import { authenticate, requireRole } from '../middleware/auth';
-
 // Helper to find a subdocument by string id from a plain array
 function findPhase(arr: IPhase[] | undefined, id: string): IPhase | undefined {
   return arr?.find((item) => (item as any)._id?.toString() === id);
@@ -117,13 +115,13 @@ router.post(
       }
 
       if (roadmap.trainerId) {
-        await Notification.create({
-          userId: roadmap.trainerId,
-          type: 'roadmap-submitted',
-          title: 'Roadmap Submitted for Approval',
-          message: `Roadmap "${roadmap.title}" has been submitted for your approval.`,
-          relatedId: roadmap._id,
-        });
+        // await Notification .create({
+        //   userId: roadmap.trainerId,
+        //   type: 'roadmap-submitted',
+        //   title: 'Roadmap Submitted for Approval',
+        //   message: `Roadmap "${roadmap.title}" has been submitted for your approval.`,
+        //   relatedId: roadmap._id,
+        // });
       }
 
       res.json({ success: true, data: roadmap });
@@ -159,17 +157,17 @@ router.put(
         : `Your roadmap "${roadmap.title}" has been rejected. Notes: ${approvalNotes ?? ''}`;
 
       const recipients = [roadmap.studentId, roadmap.trainerId].filter(Boolean);
-      await Promise.all(
-        recipients.map((userId) =>
-          Notification.create({
-            userId,
-            type: notifType,
-            title: notifTitle,
-            message: notifMessage,
-            relatedId: roadmap._id,
-          })
-        )
-      );
+      // await Promise.all(
+      //   // recipients.map((userId) =>
+      //   //   // Notification.create({
+      //   //   //   userId,
+      //   //   //   type: notifType,
+      //   //   //   title: notifTitle,
+      //   //   //   message: notifMessage,
+      //   //   //   relatedId: roadmap._id,
+      //   //   // })
+      //   // )
+      // );
 
       res.json({ success: true, data: roadmap });
     } catch (err) {

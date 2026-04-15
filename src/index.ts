@@ -13,10 +13,7 @@ import trainerRoutes from './routes/trainers';
 import roadmapRoutes from './routes/roadmaps';
 import sessionRoutes from './routes/sessions';
 import chatRoutes from './routes/chat';
-import paymentRoutes from './routes/payments';
-import walletRoutes from './routes/wallet';
 import statsRoutes from './routes/stats';
-import notificationRoutes from './routes/notifications';
 import systemRoutes from './routes/system';
 import adminRoutes from './routes/admin';
 
@@ -42,10 +39,7 @@ app.use('/api/trainers', trainerRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/wallet', walletRoutes);
 app.use('/api/stats', statsRoutes);
-app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
 

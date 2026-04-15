@@ -1,5 +1,5 @@
 // ==========================================
-// 1. NOTIFICATION ENUMS & TYPES
+// 1. INotification ENUMS & TYPES
 // ==========================================
 
 import { LeadStatus } from "./Dashboard";
@@ -16,9 +16,9 @@ export enum NotificationPriority {
 
 export enum NotificationChannel {
   IN_APP = 'in_app',   // Bell icon in dashboard
-  EMAIL = 'email',     // External email notification
+  EMAIL = 'email',     // External email INotification
   SMS = 'sms',         // Text message (optional, RWF cost consideration)
-  PUSH = 'push'        // Browser push notification
+  PUSH = 'push'        // Browser push INotification
 }
 
 export enum NotificationCategory {
@@ -66,11 +66,11 @@ export enum NotificationActionType {
 }
 
 // ==========================================
-// 2. NOTIFICATION TEMPLATES (System Generated)
+// 2. INotification TEMPLATES (System Generated)
 // ==========================================
 
 /**
- * Pre-defined notification templates for system events
+ * Pre-defined INotification templates for system events
  */
 export interface NotificationTemplate {
   id: string;
@@ -85,18 +85,18 @@ export interface NotificationTemplate {
 }
 
 // ==========================================
-// 3. CORE NOTIFICATION INTERFACE
+// 3. CORE INotification INTERFACE
 // ==========================================
 
 /**
- * Main Notification Entity
+ * Main INotification Entity
  * This is what gets stored in the database and displayed in the UI
  */
-export interface Notification {
+export interface INotification {
   // Core Fields
   id: string;
   userId: string;              // Recipient user ID
-  userRole: UserRole;          // Role at time of notification
+  userRole: UserRole;          // Role at time of INotification
   
   // Content
   title: string;
@@ -136,13 +136,13 @@ export interface Notification {
 }
 
 // ==========================================
-// 4. SPECIFIC NOTIFICATION TYPES (Discriminated Union)
+// 4. SPECIFIC INotification TYPES (Discriminated Union)
 // ==========================================
 
 /**
- * Subscription Expiry Notification (Section 8)
+ * Subscription Expiry INotification (Section 8)
  */
-export interface SubscriptionExpiryNotification extends Notification {
+export interface SubscriptionExpiryNotification extends INotification {
   category: NotificationCategory.SUBSCRIPTION;
   actionType: NotificationActionType.RENEW_SUBSCRIPTION;
   metadata: {
@@ -155,9 +155,9 @@ export interface SubscriptionExpiryNotification extends Notification {
 }
 
 /**
- * Payment Confirmation Notification
+ * Payment Confirmation INotification
  */
-export interface PaymentNotification extends Notification {
+export interface PaymentNotification extends INotification {
   category: NotificationCategory.PAYMENT;
   metadata: {
     paymentId: string;
@@ -170,9 +170,9 @@ export interface PaymentNotification extends Notification {
 }
 
 /**
- * Booking Request Notification (Trainer)
+ * Booking Request INotification (Trainer)
  */
-export interface BookingRequestNotification extends Notification {
+export interface BookingRequestNotification extends INotification {
   category: NotificationCategory.BOOKING;
   actionType: NotificationActionType.REVIEW_BOOKING;
   metadata: {
@@ -185,9 +185,9 @@ export interface BookingRequestNotification extends Notification {
 }
 
 /**
- * Booking Status Update Notification (Student)
+ * Booking Status Update INotification (Student)
  */
-export interface BookingStatusNotification extends Notification {
+export interface BookingStatusNotification extends INotification {
   category: NotificationCategory.BOOKING;
   metadata: {
     bookingId: string;
@@ -201,9 +201,9 @@ export interface BookingStatusNotification extends Notification {
 }
 
 /**
- * Guardian Invitation Notification
+ * Guardian Invitation INotification
  */
-export interface GuardianInvitationNotification extends Notification {
+export interface GuardianInvitationNotification extends INotification {
   category: NotificationCategory.GUARDIAN;
   actionType: NotificationActionType.SET_PASSWORD;
   metadata: {
@@ -216,9 +216,9 @@ export interface GuardianInvitationNotification extends Notification {
 }
 
 /**
- * Guardian Progress Update Notification
+ * Guardian Progress Update INotification
  */
-export interface GuardianProgressNotification extends Notification {
+export interface GuardianProgressNotification extends INotification {
   category: NotificationCategory.GUARDIAN;
   metadata: {
     studentId: string;
@@ -231,9 +231,9 @@ export interface GuardianProgressNotification extends Notification {
 }
 
 /**
- * Milestone Completion Notification
+ * Milestone Completion INotification
  */
-export interface MilestoneNotification extends Notification {
+export interface MilestoneNotification extends INotification {
   category: NotificationCategory.ROADMAP;
   metadata: {
     roadmapId: string;
@@ -248,9 +248,9 @@ export interface MilestoneNotification extends Notification {
 }
 
 /**
- * Certificate Generated Notification
+ * Certificate Generated INotification
  */
-export interface CertificateNotification extends Notification {
+export interface CertificateNotification extends INotification {
   category: NotificationCategory.CERTIFICATE;
   actionType: NotificationActionType.VIEW_CERTIFICATE;
   metadata: {
@@ -263,9 +263,9 @@ export interface CertificateNotification extends Notification {
 }
 
 /**
- * Project Approval Notification
+ * Project Approval INotification
  */
-export interface ProjectNotification extends Notification {
+export interface ProjectNotification extends INotification {
   category: NotificationCategory.PROJECT;
   metadata: {
     projectId: string;
@@ -279,9 +279,9 @@ export interface ProjectNotification extends Notification {
 }
 
 /**
- * Sales Lead Notification (Sales Manager)
+ * Sales Lead INotification (Sales Manager)
  */
-export interface SalesLeadNotification extends Notification {
+export interface SalesLeadNotification extends INotification {
   category: NotificationCategory.LEAD;
   actionType: NotificationActionType.CONTACT_LEAD;
   metadata: {
@@ -297,9 +297,9 @@ export interface SalesLeadNotification extends Notification {
 }
 
 /**
- * Chat Message Notification
+ * Chat Message INotification
  */
-export interface ChatNotification extends Notification {
+export interface ChatNotification extends INotification {
   category: NotificationCategory.CHAT;
   actionType: NotificationActionType.VIEW_MESSAGE;
   metadata: {
@@ -315,7 +315,7 @@ export interface ChatNotification extends Notification {
 /**
  * System Announcement (Admin to all users)
  */
-export interface SystemAnnouncementNotification extends Notification {
+export interface SystemAnnouncementNotification extends INotification {
   category: NotificationCategory.SYSTEM;
   priority: NotificationPriority.LOW;
   metadata: {
@@ -327,11 +327,11 @@ export interface SystemAnnouncementNotification extends Notification {
 }
 
 // ==========================================
-// 5. NOTIFICATION PREFERENCES
+// 5. INotification PREFERENCES
 // ==========================================
 
 /**
- * User Notification Preferences
+ * User INotification Preferences
  * Each user can customize how they receive notifications
  */
 export interface NotificationPreferences {
@@ -363,11 +363,11 @@ export interface NotificationPreferences {
 }
 
 // ==========================================
-// 6. NOTIFICATION AGGREGATION & UI STATE
+// 6. INotification AGGREGATION & UI STATE
 // ==========================================
 
 /**
- * Notification Group (For UI Display)
+ * INotification Group (For UI Display)
  * Groups similar notifications together
  */
 export interface NotificationGroup {
@@ -376,13 +376,13 @@ export interface NotificationGroup {
   title: string;
   count: number;
   unreadCount: number;
-  latestNotification: Notification;
+  latestNotification: INotification;
   priority: NotificationPriority;
   createdAt: Date;
 }
 
 /**
- * Notification Badge State (Frontend Store)
+ * INotification Badge State (Frontend Store)
  */
 export interface NotificationBadgeState {
   totalUnread: number;
@@ -392,25 +392,25 @@ export interface NotificationBadgeState {
 }
 
 /**
- * Notification Bell Component Props (React Example)
+ * INotification Bell Component Props (React Example)
  */
 export interface NotificationBellProps {
-  notifications: Notification[];
+  notifications: INotification[];
   groups: NotificationGroup[];
   badgeState: NotificationBadgeState;
   onMarkAsRead: (notificationId: string) => void;
   onMarkAllAsRead: (category?: NotificationCategory) => void;
-  onAction: (notification: Notification) => void;
+  onAction: (INotification: INotification) => void;
   onArchive: (notificationId: string) => void;
   onPreferenceClick: () => void;
 }
 
 // ==========================================
-// 7. NOTIFICATION SERVICE INTERFACE
+// 7. INotification SERVICE INTERFACE
 // ==========================================
 
 /**
- * Notification Service (Backend/Frontend API)
+ * INotification Service (Backend/Frontend API)
  */
 export interface INotificationService {
   // Core Methods
@@ -418,7 +418,7 @@ export interface INotificationService {
     userId: string, 
     templateId: string, 
     data: Record<string, any>
-  ): Promise<Notification>;
+  ): Promise<INotification>;
   
   getUserNotifications(
     userId: string, 
@@ -428,12 +428,12 @@ export interface INotificationService {
       limit?: number;
       offset?: number;
     }
-  ): Promise<Notification[]>;
+  ): Promise<INotification[]>;
   
   markAsRead(notificationId: string): Promise<void>;
   markAllAsRead(userId: string, category?: NotificationCategory): Promise<void>;
   
-  // Specific Notification Triggers (Called by other services)
+  // Specific INotification Triggers (Called by other services)
   notifySubscriptionExpiry(userId: string, daysRemaining: number): Promise<void>;
   notifyGuardianInvitation(guardianEmail: string, studentId: string): Promise<void>;
   notifyBookingRequest(trainerId: string, bookingId: string): Promise<void>;
@@ -450,7 +450,7 @@ export interface INotificationService {
 }
 
 // ==========================================
-// 8. NOTIFICATION FACTORY FUNCTIONS
+// 8. INotification FACTORY FUNCTIONS
 // ==========================================
 
 /**
@@ -560,14 +560,14 @@ export class NotificationFactory {
 }
 
 // ==========================================
-// 9. NOTIFICATION HOOKS (React Example)
+// 9. INotification HOOKS (React Example)
 // ==========================================
 
 /**
  * Custom React Hook for Notifications
  */
 export interface UseNotificationsReturn {
-  notifications: Notification[];
+  notifications: INotification[];
   groups: NotificationGroup[];
   unreadCount: number;
   highPriorityCount: number;
@@ -578,7 +578,7 @@ export interface UseNotificationsReturn {
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: (category?: NotificationCategory) => Promise<void>;
   archiveNotification: (notificationId: string) => Promise<void>;
-  handleAction: (notification: Notification) => void;
+  handleAction: (INotification: INotification) => void;
   refetch: () => Promise<void>;
   
   // Filters
@@ -588,23 +588,23 @@ export interface UseNotificationsReturn {
 }
 
 // ==========================================
-// 10. WEBSOCKET NOTIFICATION EVENTS
+// 10. WEBSOCKET INotification EVENTS
 // ==========================================
 
 /**
- * Real-time notification events (WebSocket/Socket.io)
+ * Real-time INotification events (WebSocket/Socket.io)
  */
 export interface NotificationSocketEvents {
   // Server -> Client
-  'notification:new': (notification: Notification) => void;
-  'notification:updated': (notification: Notification) => void;
-  'notification:deleted': (notificationId: string) => void;
+  'INotification:new': (INotification: INotification) => void;
+  'INotification:updated': (INotification: INotification) => void;
+  'INotification:deleted': (notificationId: string) => void;
   'badge:updated': (badgeState: NotificationBadgeState) => void;
   
   // Client -> Server
-  'notification:mark-read': (notificationId: string) => void;
-  'notification:mark-all-read': (category?: NotificationCategory) => void;
-  'notification:archive': (notificationId: string) => void;
-  'notification:action': (notificationId: string, actionData: any) => void;
+  'INotification:mark-read': (notificationId: string) => void;
+  'INotification:mark-all-read': (category?: NotificationCategory) => void;
+  'INotification:archive': (notificationId: string) => void;
+  'INotification:action': (notificationId: string, actionData: any) => void;
 }
 
