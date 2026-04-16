@@ -1,9 +1,9 @@
-import { BookingModel, BookingStatus, Booking } from '../models/Booking';
+import { BookingModel, BookingStatus, Booking, StudentBookingRequest } from '../models/Booking';
 import { StudentModel, TrainerModel } from '../models/User';
 import { PaymentModel, PaymentType } from '../models/Payment';
 
 export class BookingService {
-  static async createBooking(studentId: string, bookingRequest: any) {
+  static async createBooking(studentId: string, bookingRequest: StudentBookingRequest) {
     const { trainerId, requestedTime, learningGoals } = bookingRequest;
 
     // Validate student exists and has paid orientation

@@ -22,6 +22,8 @@ export class BookingController {
         learningGoals
       });
 
+      
+
       res.status(201).json({
         success: true,
         data: booking

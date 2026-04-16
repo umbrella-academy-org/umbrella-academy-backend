@@ -50,7 +50,7 @@ export class PaymentService {
       promoCodeApplied,
       finalAmount,
       transactionRef,
-      status: 'pending',
+      status: 'success',
       paidAt: new Date()
     });
     await user.updateOne({ $set: { hasPaidOrientation: true } });
@@ -107,11 +107,11 @@ export class PaymentService {
       promoCodeApplied,
       finalAmount,
       transactionRef,
-      status: 'pending',
+      status: 'success',
       paidAt: new Date()
     });
 
-    await user.updateOne({ $set: { hasPaidSubscription: true } });
+    await user.updateOne({ $set: { hasActiveSubscription: true } });
 
     return {
       payment,
