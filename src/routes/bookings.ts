@@ -16,7 +16,7 @@ router.get('/available-trainers', authenticate, requireRole('student'), BookingC
 
 // Trainer booking management endpoints
 // GET /bookings/trainer - get trainer's bookings
-router.get('/trainer', authenticate, requireRole('trainer'), BookingController.getTrainerBookings);
+router.get('/trainer', authenticate, BookingController.getTrainerBookings);
 
 // GET /bookings/:bookingId - get booking by ID
 router.get('/:bookingId', authenticate, BookingController.getBookingById);

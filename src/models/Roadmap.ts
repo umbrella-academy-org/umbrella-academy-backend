@@ -18,22 +18,7 @@ export enum RoadmapStepStatus {
   COMPLETED = 'completed'
 }
 
-export interface OrientationBooking extends Document {
-  id: string;
-  studentId: string;
-  trainerId: string;
-  requestedTime: Date;
-  alternativeTime?: Date;
-  learningGoals: string;
-  status: BookingStatus;
-  rejectionReason?: string;
-  meetingLink?: string;
-  createdAt: Date;
-}
-
 export interface Milestone {
-  id: string;
-  roadmapId: string;
   title: string;
   description: string;
   skillsToLearn: string[];
@@ -47,10 +32,13 @@ export interface Milestone {
 }
 
 export interface Roadmap extends Document {
-  id: string;
   studentId: string;
   trainerId: string;
   title: string;
+  status: RoadmapStatus;
+  approvedBy?: string; 
+  approvedAt?: Date;
+  rejectionReason?: string;
   milestones: Milestone[];
   createdAt: Date;
   updatedAt: Date;
@@ -58,8 +46,6 @@ export interface Roadmap extends Document {
 
 // Schemas
 const MilestoneSchema = new Schema<Milestone>({
-  id: { type: String, required: true },
-  roadmapId: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
   skillsToLearn: [{ type: String, required: true }],
@@ -77,35 +63,24 @@ const MilestoneSchema = new Schema<Milestone>({
 });
 
 const RoadmapSchema = new Schema<Roadmap>({
-  id: { type: String, required: true },
   studentId: { type: String, required: true },
   trainerId: { type: String, required: true },
   title: { type: String, required: true },
+  status: { 
+    type: String, 
+    enum: ['draft', 'pending-approval', 'approved', 'active', 'paused', 'completed', 'rejected'], 
+    default: 'draft' 
+  },
+  approvedBy: { type: String, default: null }, // Admin ID who approved
+  approvedAt: { type: Date, default: null },
+  rejectionReason: { type: String, default: null },
   milestones: [MilestoneSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
-const OrientationBookingSchema = new Schema<OrientationBooking>({
-  id: { type: String, required: true },
-  studentId: { type: String, required: true },
-  trainerId: { type: String, required: true },
-  requestedTime: { type: Date, required: true },
-  alternativeTime: { type: Date, default: undefined },
-  learningGoals: { type: String, required: true },
-  status: { 
-    type: String, 
-    enum: Object.values(BookingStatus), 
-    required: true 
-  },
-  rejectionReason: { type: String, default: undefined },
-  meetingLink: { type: String, default: undefined },
-  createdAt: { type: Date, default: Date.now }
-});
 
 // Models
 export const RoadmapModel = model<Roadmap>('Roadmap', RoadmapSchema);
-export const OrientationBookingModel = model<OrientationBooking>('OrientationBooking', OrientationBookingSchema);
-
 
 

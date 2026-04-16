@@ -91,7 +91,6 @@ export class BookingService {
     const bookings = await BookingModel.find(filter)
       .populate('trainerId', 'firstName lastName email')
       .sort({ createdAt: -1 });
-    console.log(bookings)
     return bookings;
   }
   static async getTrainerBookings(trainerId: string, bookingStatus?: BookingStatus) {

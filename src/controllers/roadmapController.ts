@@ -68,4 +68,112 @@ export class RoadmapController {
       next(err);
     }
   }
+
+  // POST /api/roadmaps/:id/submit-for-approval - submit roadmap for approval (trainers only)
+  static async submitForApproval(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const roadmapId = req.params.id as string;
+
+      const roadmap = await RoadmapService.submitForApproval(roadmapId, userId);
+      res.json({ 
+        success: true, 
+        data: roadmap,
+        message: 'Roadmap submitted for approval successfully' 
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Only draft roadmaps can be submitted for approval') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  // POST /api/roadmaps/:id/approve - approve roadmap (admin only)
+  static async approveRoadmap(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const roadmapId = req.params.id as string;
+
+      const roadmap = await RoadmapService.approveRoadmap(roadmapId, userId);
+      res.json({ 
+        success: true, 
+        data: roadmap,
+        message: 'Roadmap approved successfully' 
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Roadmap must be in pending-approval status to be approved') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  // POST /api/roadmaps/:id/reject - reject roadmap (admin only)
+  static async rejectRoadmap(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const roadmapId = req.params.id as string;
+      const { rejectionReason } = req.body as { rejectionReason: string };
+
+      if (!rejectionReason) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Rejection reason is required' 
+        });
+      }
+
+      const roadmap = await RoadmapService.rejectRoadmap(roadmapId, userId, rejectionReason);
+      res.json({ 
+        success: true, 
+        data: roadmap,
+        message: 'Roadmap rejected successfully' 
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Roadmap must be in pending-approval status to be rejected') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  // POST /api/roadmaps/:id/activate - activate roadmap (admin only)
+  static async activateRoadmap(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const roadmapId = req.params.id as string;
+
+      const roadmap = await RoadmapService.activateRoadmap(roadmapId, userId);
+      res.json({ 
+        success: true, 
+        data: roadmap,
+        message: 'Roadmap activated successfully' 
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Roadmap must be approved before activation') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
 }
