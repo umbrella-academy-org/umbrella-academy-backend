@@ -19,7 +19,6 @@ export class PaymentController {
           amount: result.amount,
           originalAmount: result.originalAmount,
           discountApplied: result.discountApplied,
-          paymentUrl: result.paymentUrl,
           type: PaymentType.ORIENTATION
         }
       });
@@ -58,7 +57,6 @@ export class PaymentController {
           amount: result.amount,
           originalAmount: result.originalAmount,
           discountApplied: result.discountApplied,
-          paymentUrl: result.paymentUrl,
           type: PaymentType.SUBSCRIPTION
         }
       });

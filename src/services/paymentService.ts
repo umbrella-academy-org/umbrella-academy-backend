@@ -53,14 +53,11 @@ export class PaymentService {
       status: 'pending',
       paidAt: new Date()
     });
+    await user.updateOne({ $set: { hasPaidOrientation: true } });
 
-    // In a real implementation, you would integrate with a payment gateway here
-    // For now, we'll return the payment URL that would redirect to payment provider
-    const paymentUrl = this.generatePaymentUrl(payment);
 
     return {
       payment,
-      paymentUrl,
       amount: finalAmount,
       originalAmount: this.ORIENTATION_FEE,
       discountApplied: promoCodeApplied ? this.ORIENTATION_FEE - finalAmount : 0
@@ -114,12 +111,10 @@ export class PaymentService {
       paidAt: new Date()
     });
 
-    // In a real implementation, you would integrate with a payment gateway here
-    const paymentUrl = this.generatePaymentUrl(payment);
+    await user.updateOne({ $set: { hasPaidSubscription: true } });
 
     return {
       payment,
-      paymentUrl,
       amount: finalAmount,
       originalAmount: this.SUBSCRIPTION_FEE,
       discountApplied: promoCodeApplied ? this.SUBSCRIPTION_FEE - finalAmount : 0

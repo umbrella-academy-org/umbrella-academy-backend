@@ -34,4 +34,6 @@ router.post('/trainers/:id/reject', authenticate, requireRole('admin'), AuthCont
 // POST /api/auth/login
 router.post('/login', AuthController.login);
 
+router.get('/onboarding-checklist', authenticate, AuthController.getOnboardingChecklist);
+
 export default router;

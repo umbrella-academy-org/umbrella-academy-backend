@@ -137,4 +137,15 @@ export class AuthController {
       next(err);
     }
   }
+
+  // GET /api/auth/onboarding-checklist
+  static async getOnboardingChecklist(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const response = await AuthService.getStudentOnboardingChecklist(userId);
+      return res.status(200).json(response);
+    } catch (err) {
+      next(err);
+    }
+  }
 }

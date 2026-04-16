@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { UserModel, GuardianModel, StudentModel, TrainerModel } from '../models/User';
+import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist } from '../models/User';
 import { sendEmail } from '../services/emailService';
 import { ApiResponse } from '@/interfaces/api';
 import { StudentRegister } from '@/interfaces/auth';
@@ -15,10 +15,10 @@ export class AuthService {
   static async registerStudent(studentData: StudentRegister) {
     const { guardianName, guardianEmail, guardianPhoneNumber, ...studentInfo } = studentData;
     const student = studentInfo as any;
-    
+
     const hashedPassword = await bcrypt.hash(student.password, 10);
     student.password = hashedPassword;
-    
+
     const guardian = {
       firstName: guardianName,
       email: guardianEmail,
@@ -34,7 +34,7 @@ export class AuthService {
     await savedGuardian.save();
 
     const token = AuthService.signToken(String(savedStudent._id), savedStudent.role);
-    
+
     return {
       success: true,
       message: "Student registered successfully",
@@ -52,7 +52,7 @@ export class AuthService {
 
     const savedTrainer = await TrainerModel.create(trainer);
     const token = AuthService.signToken(String(savedTrainer._id), savedTrainer.role);
-    
+
     return {
       success: true,
       message: "Trainer registered successfully",
@@ -269,6 +269,31 @@ export class AuthService {
         token,
         user
       }
+    } as ApiResponse;
+  }
+
+  static async getStudentOnboardingChecklist(userId: string) {
+    const user = await StudentModel.findById(userId);
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'User not found'
+      };
+    }
+    const response: OnboardingChecklist = {
+      accountCreated: true,
+      bookingPayed: user.hasPaidOrientation,
+      subscriptionPayed: user.hasActiveSubscription,
+      orientationBooked: user.onboardingStatus.orientationBooked,
+      roadmapReceived: user.onboardingStatus.roadmapReceived,
+      learningStarted: user.onboardingStatus.learningStarted
+    }
+
+    return {
+      success: true,
+      message: 'Dashboard retrieved successfully',
+      data: response
     } as ApiResponse;
   }
 }
