@@ -16,6 +16,7 @@ import statsRoutes from './routes/stats';
 import systemRoutes from './routes/system';
 import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payments';
+import bookingRoutes from './routes/bookings';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
