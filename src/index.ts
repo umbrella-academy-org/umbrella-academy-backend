@@ -15,6 +15,7 @@ import chatRoutes from './routes/chat';
 import statsRoutes from './routes/stats';
 import systemRoutes from './routes/system';
 import adminRoutes from './routes/admin';
+import paymentRoutes from './routes/payments';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -5,7 +5,8 @@ This backend follows a **Controller-Service-Route** pattern to improve maintaina
 
 ## Directory Structure
 
-```
+```mermaid
+graph TD
 src/
 |-- controllers/          # Request handling and response formatting
 |   |-- statsController.ts
@@ -135,7 +136,8 @@ src/
 
 ## Request Flow Example
 
-```
+```mermaid
+graph TD
 HTTP Request
     |
     v
