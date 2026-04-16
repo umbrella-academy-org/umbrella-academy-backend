@@ -16,12 +16,6 @@ export enum GuardianInviteState {
   DECLINED = 'declined'
 }
 
-export interface Availability {
-  weeklyAvailableHours: number;
-  preferredTimeSlots: string[];
-  preferredDays: string[];
-}
-
 export interface OnboardingChecklist {
   accountCreated: boolean; 
   bookingPayed: boolean;
@@ -81,7 +75,6 @@ export interface Trainer extends BaseUser {
   introVideoUrl: string;
   experience: Experience;
   skills: string[];
-  availability: Availability;
   approvalStatus: 'pending' | 'approved' | 'rejected'
 }
 
@@ -93,7 +86,6 @@ export interface TrainerApplicationForm {
   cvUrl: string;
   experience: Experience;
   skills: string[];
-  availability: string;
   introVideoUrl: string;
 }
 
@@ -152,7 +144,6 @@ const trainerSchema = new Schema<Trainer>({
     specializations: [String]
   },
   skills: [String],
-  availability: { type: Object },
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],

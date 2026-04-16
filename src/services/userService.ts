@@ -28,12 +28,12 @@ export class UserService {
 
   static async getTrainers() {
     const trainers = await TrainerModel.find().select('-password');
-    return trainers;
+    return trainers.map(trainer => ({ ...trainer.toJSON(), id: trainer._id.toString() }));
   }
 
   static async getStudents() {
     const students = await StudentModel.find().select('-password');
-    return students;
+    return students.map(student => ({ ...student.toObject(), id: student._id.toString() }));
   }
 
   static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'suspended') {
