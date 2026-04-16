@@ -10,6 +10,12 @@ router.put('/profile', authenticate, requireRole('student'), UserController.upda
 // GET /users - admin scoped
 router.get('/', authenticate, requireRole('admin'), UserController.getUsers);
 
+// GET /users/trainers - admin scoped
+router.get('/trainers', authenticate, UserController.getTrainers);
+
+// GET /users/students - admin scoped
+router.get('/students', authenticate, UserController.getStudents);
+
 // GET /users/:id - get user by id
 router.get('/:id', authenticate, UserController.getUserById);
 

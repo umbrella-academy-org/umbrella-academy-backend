@@ -27,6 +27,26 @@ export class UserController {
     }
   }
 
+  // GET /users/trainers - admin scoped
+  static async getTrainers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const trainers = await UserService.getTrainers();
+      res.json({ success: true, data: trainers });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // GET /users/students - admin scoped
+  static async getStudents(req: Request, res: Response, next: NextFunction) {
+    try {
+      const students = await UserService.getStudents();
+      res.json({ success: true, data: students });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   // PUT /users/:id/status
   static async updateUserStatus(req: Request, res: Response, next: NextFunction) {
     try {

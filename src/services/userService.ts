@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { UserModel } from '../models/User';
+import { StudentModel, TrainerModel, UserModel } from '../models/User';
 
 export class UserService {
   static async updateProfile(userId: string, profileData: any) {
@@ -24,6 +24,16 @@ export class UserService {
 
     const users = await UserModel.find(filter).select('-password');
     return users;
+  }
+
+  static async getTrainers() {
+    const trainers = await TrainerModel.find().select('-password');
+    return trainers;
+  }
+
+  static async getStudents() {
+    const students = await StudentModel.find().select('-password');
+    return students;
   }
 
   static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'suspended') {
