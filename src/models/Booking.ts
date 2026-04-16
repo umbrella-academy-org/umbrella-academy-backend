@@ -14,6 +14,15 @@ export interface StudentBookingRequest {
   learningGoals: string;
 }
 
+export interface TrainerApprovalRequest {
+  approvalNotes: string;
+  sessionDuration: number; // in minutes
+  sessionFormat: 'online' | 'in-person';
+  sessionLocation: string; // URL or physical address
+  preparationRequirements: string;
+  nextSteps: string;
+}
+
 export interface Booking extends Document {
   id: string;
   studentId: string;
@@ -22,6 +31,12 @@ export interface Booking extends Document {
   learningGoals: string;
   status: BookingStatus;
   rejectionReason?: string;
+  approvalNotes?: string;
+  sessionDuration?: number; // in minutes
+  sessionFormat?: 'online' | 'in-person';
+  sessionLocation?: string; // URL or physical address
+  preparationRequirements?: string;
+  nextSteps?: string;
   approvedAt?: Date;
   completedAt?: Date;
   createdAt: Date;
@@ -41,6 +56,16 @@ const BookingSchema = new Schema<Booking>({
     default: BookingStatus.PENDING
   },
   rejectionReason: { type: String, default: null },
+  approvalNotes: { type: String, default: null },
+  sessionDuration: { type: Number, default: null }, // in minutes
+  sessionFormat: { 
+    type: String, 
+    enum: ['online', 'in-person'], 
+    default: null 
+  },
+  sessionLocation: { type: String, default: null }, // URL or physical address
+  preparationRequirements: { type: String, default: null },
+  nextSteps: { type: String, default: null },
   approvedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null }
 }, {

@@ -1,4 +1,4 @@
-import { BookingModel, BookingStatus, Booking, StudentBookingRequest } from '../models/Booking';
+import { BookingModel, BookingStatus, Booking, StudentBookingRequest, TrainerApprovalRequest } from '../models/Booking';
 import { StudentModel, TrainerModel } from '../models/User';
 import { PaymentModel, PaymentType } from '../models/Payment';
 
@@ -64,7 +64,7 @@ export class BookingService {
     }
 
     const bookingId = this.generateBookingId();
-    
+
     const booking = await BookingModel.create({
       id: bookingId,
       studentId,
@@ -91,14 +91,13 @@ export class BookingService {
     const bookings = await BookingModel.find(filter)
       .populate('trainerId', 'firstName lastName email')
       .sort({ createdAt: -1 });
-
+    console.log(bookings)
     return bookings;
   }
-
-  static async getTrainerBookings(trainerId: string, status?: BookingStatus) {
+  static async getTrainerBookings(trainerId: string, bookingStatus?: BookingStatus) {
     const filter: any = { trainerId };
-    if (status) {
-      filter.status = status;
+    if (bookingStatus) {
+      filter.status = bookingStatus;
     }
 
     const bookings = await BookingModel.find(filter)
@@ -108,7 +107,7 @@ export class BookingService {
     return bookings;
   }
 
-  static async approveBooking(bookingId: string, trainerId: string) {
+  static async approveBooking(bookingId: string, trainerId: string, approvalData: TrainerApprovalRequest) {
     const booking = await BookingModel.findOne({ id: bookingId, trainerId });
     if (!booking) {
       throw new Error('Booking not found');
@@ -118,8 +117,29 @@ export class BookingService {
       throw new Error('Booking cannot be approved in current status');
     }
 
+    const {
+      approvalNotes,
+      sessionDuration,
+      sessionFormat,
+      sessionLocation,
+      preparationRequirements,
+      nextSteps
+    } = approvalData;
+
+    // Validate approval data
+    if (!approvalNotes || !sessionDuration || !sessionFormat || !sessionLocation || !preparationRequirements || !nextSteps) {
+      throw new Error('All approval fields are required');
+    }
+
     booking.status = BookingStatus.APPROVED;
     booking.approvedAt = new Date();
+    booking.approvalNotes = approvalNotes;
+    booking.sessionDuration = sessionDuration;
+    booking.sessionFormat = sessionFormat;
+    booking.sessionLocation = sessionLocation;
+    booking.preparationRequirements = preparationRequirements;
+    booking.nextSteps = nextSteps;
+    
     await booking.save();
 
     // Assign trainer to student

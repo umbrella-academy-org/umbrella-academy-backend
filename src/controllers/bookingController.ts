@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { BookingService } from '../services/bookingService';
-import { BookingStatus } from '../models/Booking';
+import { BookingStatus, TrainerApprovalRequest } from '../models/Booking';
 
 export class BookingController {
   // POST /bookings - create new booking (student only)
@@ -92,8 +92,19 @@ export class BookingController {
     try {
       const trainerId = req.user!.userId;
       const { bookingId } = req.params as { bookingId: string };
+      const approvalData = req.body as TrainerApprovalRequest;
 
-      const booking = await BookingService.approveBooking(bookingId, trainerId);
+      // Validate all required approval fields
+      const { approvalNotes, sessionDuration, sessionFormat, sessionLocation, preparationRequirements, nextSteps } = approvalData;
+      
+      if (!approvalNotes || !sessionDuration || !sessionFormat || !sessionLocation || !preparationRequirements || !nextSteps) {
+        return res.status(400).json({
+          success: false,
+          message: 'All approval fields are required: approvalNotes, sessionDuration, sessionFormat, sessionLocation, preparationRequirements, nextSteps'
+        });
+      }
+
+      const booking = await BookingService.approveBooking(bookingId, trainerId, approvalData);
 
       res.json({
         success: true,
@@ -106,6 +117,9 @@ export class BookingController {
           return res.status(404).json({ success: false, message: err.message });
         }
         if (err.message === 'Booking cannot be approved in current status') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+        if (err.message === 'All approval fields are required') {
           return res.status(400).json({ success: false, message: err.message });
         }
       }

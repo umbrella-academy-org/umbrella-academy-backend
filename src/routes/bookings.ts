@@ -14,17 +14,17 @@ router.get('/student', authenticate, requireRole('student'), BookingController.g
 // GET /bookings/available-trainers - get list of available trainers
 router.get('/available-trainers', authenticate, requireRole('student'), BookingController.getAvailableTrainers);
 
+// Trainer booking management endpoints
+// GET /bookings/trainer - get trainer's bookings
+router.get('/trainer', authenticate, requireRole('trainer'), BookingController.getTrainerBookings);
+
 // GET /bookings/:bookingId - get booking by ID
 router.get('/:bookingId', authenticate, BookingController.getBookingById);
 
 // POST /bookings/:bookingId/cancel - cancel booking (student or trainer)
 router.post('/:bookingId/cancel', authenticate, BookingController.cancelBooking);
 
-// Trainer booking management endpoints
-// GET /bookings/trainer - get trainer's bookings
-router.get('/trainer', authenticate, requireRole('trainer'), BookingController.getTrainerBookings);
-
-// POST /bookings/:bookingId/approve - approve booking (trainer only)
+// POST /bookings/:bookingId // TODO: Fetch trainer pending bookings/approve - approve booking (trainer only)
 router.post('/:bookingId/approve', authenticate, requireRole('trainer'), BookingController.approveBooking);
 
 // POST /bookings/:bookingId/reject - reject booking (trainer only)
