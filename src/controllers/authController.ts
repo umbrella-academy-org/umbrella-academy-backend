@@ -95,37 +95,6 @@ export class AuthController {
     }
   }
 
-  // PATCH /api/auth/trainers/:id/approve
-  static async approveTrainer(req: Request, res: Response, next: NextFunction) {
-    try {
-      const trainerId = req.params.id as string;
-      const response = await AuthService.approveTrainer(trainerId);
-      
-      if (!response.success) {
-        return res.status(404).json(response);
-      }
-      
-      return res.status(200).json(response);
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  // POST /api/auth/trainers/:id/reject
-  static async rejectTrainer(req: Request, res: Response, next: NextFunction) {
-    try {
-      const trainerId = req.params.id as string;
-      const response = await AuthService.rejectTrainer(trainerId);
-      
-      if (!response.success) {
-        return res.status(404).json(response);
-      }
-      
-      return res.status(200).json(response);
-    } catch (err) {
-      next(err);
-    }
-  }
 
   // POST /api/auth/login
   static async login(req: Request, res: Response, next: NextFunction) {

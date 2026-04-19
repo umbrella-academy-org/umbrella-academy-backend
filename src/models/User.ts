@@ -75,7 +75,11 @@ export interface Trainer extends BaseUser {
   introVideoUrl: string;
   experience: Experience;
   skills: string[];
-  approvalStatus: 'pending' | 'approved' | 'rejected'
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string; // Admin ID who approved/rejected
+  approvedAt?: Date;
+  rejectionReason?: string;
+  id: string; // Virtual field for _id conversion
 }
 
 export interface TrainerApplicationForm {
@@ -148,7 +152,10 @@ const trainerSchema = new Schema<Trainer>({
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
-  }
+  },
+  approvedBy: { type: String, default: null }, // Admin ID who approved/rejected
+  approvedAt: { type: Date, default: null },
+  rejectionReason: { type: String, default: null }
 });
 
 

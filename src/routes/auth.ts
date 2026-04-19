@@ -25,12 +25,6 @@ router.post('/forgot-password', AuthController.forgotPassword);
 // POST /api/auth/reset-password
 router.post('/reset-password', AuthController.resetPassword);
 
-// PATCH /api/auth/trainers/:id/approve
-router.patch('/trainers/:id/approve', authenticate, requireRole('admin'), AuthController.approveTrainer);
-
-// POST /api/auth/trainers/:id/reject
-router.post('/trainers/:id/reject', authenticate, requireRole('admin'), AuthController.rejectTrainer);
-
 // POST /api/auth/login
 router.post('/login', AuthController.login);
 

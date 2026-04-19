@@ -26,7 +26,7 @@ async function seedAdmin() {
       isVerified: true,
     });
     await admin.save();
-    console.log('🚀 Created Dreamize admin user');
+    console.log('Created Dreamize admin user');
   } catch (err) {
     console.error('Failed to seed admin:', err);
   }

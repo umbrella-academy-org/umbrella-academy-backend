@@ -176,58 +176,7 @@ export class AuthService {
     return { success: true };
   }
 
-  static async approveTrainer(trainerId: string) {
-    const user = await UserModel.findByIdAndUpdate(
-      trainerId,
-      { approvalStatus: 'approved', status: 'active' },
-      { new: true }
-    );
-
-    if (!user) {
-      return { success: false, message: 'Trainer not found' };
-    }
-
-    try {
-      await sendEmail({
-        to_email: user.email,
-        to_name: user.firstName,
-        subject: 'Your Trainer Application Has Been Approved',
-        message: `Congratulations! Your trainer application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/login`
-      });
-    } catch {
-      // ignore
-    }
-
-    return { success: true, user };
-  }
-
-  static async rejectTrainer(trainerId: string) {
-    const user = await UserModel.findById(trainerId);
-
-    if (!user || user.role !== 'trainer') {
-      return { success: false, message: 'Trainer not found' };
-    }
-
-    const updatedUser = await UserModel.findByIdAndUpdate(
-      trainerId,
-      { approvalStatus: 'rejected', status: 'inactive' },
-      { new: true }
-    );
-
-    try {
-      await sendEmail({
-        to_email: user.email,
-        to_name: user.firstName,
-        subject: 'Your Trainer Application Has Been Rejected',
-        message: `We regret to inform you that your trainer application has not been approved at this time.`
-      });
-    } catch {
-      // ignore
-    }
-
-    return { success: true, data: updatedUser };
-  }
-
+  
   static async login(email: string, password: string) {
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     if (!user) {
