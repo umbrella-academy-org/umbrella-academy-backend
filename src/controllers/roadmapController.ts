@@ -178,4 +178,64 @@ export class RoadmapController {
       next(err);
     }
   }
+
+  // POST /api/roadmaps/:roadmapId/milestones/:milestoneId/complete - complete milestone (students only)
+  static async completeMilestone(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const { roadmapId, milestoneId } = req.params as { roadmapId: string, milestoneId: string };
+      const { trainerFeedback } = req.body as { trainerFeedback?: string };
+
+      const roadmap = await RoadmapService.completeMilestone(roadmapId, milestoneId, userId, trainerFeedback);
+      res.json({ 
+        success: true, 
+        data: roadmap,
+        message: 'Milestone completed successfully' 
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Milestone not found in this roadmap') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Access denied: This roadmap does not belong to the student') {
+          return res.status(403).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Milestone must be active or locked to be completed') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  // POST /api/roadmaps/:roadmapId/activate-next-milestone - activate next milestone (students only)
+  static async activateNextMilestone(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const roadmapId = req.params.roadmapId as string;
+
+      const roadmap = await RoadmapService.activateNextMilestone(roadmapId, userId);
+      res.json({ 
+        success: true, 
+        data: roadmap,
+        message: 'Next milestone activated successfully' 
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Access denied: This roadmap does not belong to the student') {
+          return res.status(403).json({ success: false, message: err.message });
+        }
+        if (err.message === 'No locked milestones found to activate') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
 }

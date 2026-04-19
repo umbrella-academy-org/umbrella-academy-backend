@@ -33,11 +33,11 @@ export class RoadmapService {
 
     // Generate unique IDs for roadmap and milestones
     const roadmapId = `RM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Process milestones with proper IDs and status
     const processedMilestones = roadmapData.milestones.map((milestone: any, index: number) => ({
       ...milestone,
-     
+
       order: index + 1,
       status: milestone.status || 'locked', // Default to locked for new milestones
       completedAt: null
@@ -155,7 +155,7 @@ export class RoadmapService {
   }
 
   static async activateRoadmap(roadmapId: string, adminId: string) {
-    const roadmap = await RoadmapModel.findOne({ id: roadmapId });
+    const roadmap = await RoadmapModel.findById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
     }
@@ -165,7 +165,7 @@ export class RoadmapService {
     }
 
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
-      { id: roadmapId },
+      { _id: roadmapId },
       {
         status: 'active',
         updatedAt: new Date()
@@ -177,6 +177,94 @@ export class RoadmapService {
     await StudentModel.findByIdAndUpdate(roadmap.studentId, {
       'onboardingStatus.learningStarted': true
     });
+
+    return updatedRoadmap;
+  }
+
+  static async completeMilestone(roadmapId: string, milestoneId: string, studentId: string, trainerFeedback?: string) {
+    const roadmap = await RoadmapModel.findById(roadmapId);
+    if (!roadmap) {
+      throw new Error('Roadmap not found');
+    }
+
+    if (roadmap.studentId !== studentId) {
+      throw new Error('Access denied: This roadmap does not belong to the student');
+    }
+
+    // Find the milestone in the roadmap
+    const milestone = roadmap.milestones.find(m => m.order === parseInt(milestoneId));
+    if (!milestone) {
+      throw new Error('Milestone not found in this roadmap');
+    }
+
+    if (milestone.status !== 'active' && milestone.status !== 'locked') {
+      throw new Error('Milestone must be active or locked to be completed');
+    }
+
+    // Update milestone status
+    const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
+      {
+        _id: roadmapId,
+        'milestones._id': milestoneId
+      },
+      {
+        $set: {
+          'milestones.$.status': 'completed',
+          'milestones.$.completedAt': new Date(),
+          'milestones.$.trainerFeedback': trainerFeedback || null,
+          updatedAt: new Date()
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    // Check if all milestones are completed and update roadmap status
+    const allMilestonesCompleted = updatedRoadmap?.milestones.every(m => m.status === 'completed');
+    if (allMilestonesCompleted) {
+      await RoadmapModel.findByIdAndUpdate(roadmapId, {
+        status: 'completed',
+        updatedAt: new Date()
+      });
+
+      // Update student onboarding status
+      await StudentModel.findByIdAndUpdate(studentId, {
+        'onboardingStatus.learningCompleted': true
+      });
+    }
+
+    return updatedRoadmap;
+  }
+
+  static async activateNextMilestone(roadmapId: string, studentId: string) {
+    const roadmap = await RoadmapModel.findById(roadmapId);
+    if (!roadmap) {
+      throw new Error('Roadmap not found');
+    }
+
+    if (roadmap.studentId !== studentId) {
+      throw new Error('Access denied: This roadmap does not belong to the student');
+    }
+
+    // Find the next locked milestone
+    const nextMilestone = roadmap.milestones.find(m => m.status === 'locked');
+    if (!nextMilestone) {
+      throw new Error('No locked milestones found to activate');
+    }
+
+    // Update the next milestone to active
+    const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
+      {
+        _id: roadmapId,
+        'milestones.order': nextMilestone.order
+      },
+      {
+        $set: {
+          'milestones.$.status': 'active',
+          updatedAt: new Date()
+        }
+      },
+      { new: true, runValidators: true }
+    );
 
     return updatedRoadmap;
   }

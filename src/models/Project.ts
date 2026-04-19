@@ -53,7 +53,6 @@ const AttachmentsSchema = new Schema({
 });
 
 const ProjectSchema = new Schema<Project>({
-  id: { type: String, required: true },
   studentId: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
@@ -65,13 +64,29 @@ const ProjectSchema = new Schema<Project>({
   status: { 
     type: String, 
     enum: Object.values(ProjectStatus), 
+    default: 'draft',
     required: true 
   },
   trainerFeedback: { type: String, default: undefined },
   approvedByTrainerId: { type: String, default: undefined },
   approvedAt: { type: Date, default: undefined },
   isPublic: { type: Boolean, required: true },
-  createdAt: { type: Date, required: true }
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Virtual field to convert _id to id
+ProjectSchema.virtual('id').get(function(this: any) {
+  return this._id.toHexString();
+});
+
+// Ensure virtual fields are included in JSON output
+ProjectSchema.set('toJSON', {
+  virtuals: true,
+  transform: function(doc, ret: any) {
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
 });
 
 // Model

@@ -1,0 +1,200 @@
+import { ProjectModel, ProjectStatus } from '../models/Project';
+import { StudentModel } from '../models/User';
+
+export class ProjectService {
+  static async createProject(projectData: any, studentId: string) {
+    // Validate student exists
+    const student = await StudentModel.findById(studentId);
+    if (!student) {
+      throw new Error('Student not found');
+    }
+
+    const project = new ProjectModel({
+      ...projectData,
+      studentId,
+      status: ProjectStatus.DRAFT,
+      createdAt: new Date()
+    });
+
+    return await project.save();
+  }
+
+  static async getStudentProjects(studentId: string, status?: ProjectStatus) {
+    let filter: any = { studentId };
+    if (status) {
+      filter.status = status;
+    }
+
+    const projects = await ProjectModel.find(filter)
+      .sort({ createdAt: -1 });
+
+    return projects;
+  }
+
+  static async getProjectById(projectId: string, userId?: string, userRole?: string) {
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Check access permissions
+    if (userId && userRole) {
+      if (userRole === 'student' && project.studentId !== userId) {
+        throw new Error('Access denied: This project does not belong to you');
+      }
+      // Trainers can view projects of their assigned students
+      if (userRole === 'trainer') {
+        const student = await StudentModel.findById(project.studentId);
+        if (student?.assignedTrainerId !== userId) {
+          throw new Error('Access denied: You are not assigned to this student');
+        }
+      }
+    }
+
+    return project;
+  }
+
+  static async updateProject(projectId: string, updateData: any, studentId: string) {
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    if (project.studentId !== studentId) {
+      throw new Error('Access denied: This project does not belong to you');
+    }
+
+    if (project.status !== ProjectStatus.DRAFT) {
+      throw new Error('Only draft projects can be updated');
+    }
+
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    return updatedProject;
+  }
+
+  static async submitProject(projectId: string, studentId: string) {
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    if (project.studentId !== studentId) {
+      throw new Error('Access denied: This project does not belong to you');
+    }
+
+    if (project.status !== ProjectStatus.DRAFT) {
+      throw new Error('Only draft projects can be submitted');
+    }
+
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { 
+        status: ProjectStatus.PENDING_APPROVAL,
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    return updatedProject;
+  }
+
+  static async approveProject(projectId: string, trainerId: string, feedback?: string) {
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    if (project.status !== ProjectStatus.PENDING_APPROVAL) {
+      throw new Error('Project must be in pending approval status to be approved');
+    }
+
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { 
+        status: ProjectStatus.APPROVED,
+        approvedByTrainerId: trainerId,
+        trainerFeedback: feedback || null,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    return updatedProject;
+  }
+
+  static async rejectProject(projectId: string, trainerId: string, feedback: string) {
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    if (project.status !== ProjectStatus.PENDING_APPROVAL) {
+      throw new Error('Project must be in pending approval status to be rejected');
+    }
+
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { 
+        status: ProjectStatus.REJECTED,
+        approvedByTrainerId: trainerId,
+        trainerFeedback: feedback,
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    return updatedProject;
+  }
+
+  static async getTrainerProjects(trainerId: string, status?: ProjectStatus) {
+    // Get all students assigned to this trainer
+    const students = await StudentModel.find({ assignedTrainerId: trainerId });
+    const studentIds = students.map(student => student._id.toString());
+
+    let filter: any = { studentId: { $in: studentIds } };
+    if (status) {
+      filter.status = status;
+    }
+
+    const projects = await ProjectModel.find(filter)
+      .sort({ createdAt: -1 });
+
+    return projects;
+  }
+
+  static async getAllProjects(status?: ProjectStatus) {
+    let filter: any = {};
+    if (status) {
+      filter.status = status;
+    }
+
+    const projects = await ProjectModel.find(filter)
+      .sort({ createdAt: -1 });
+
+    return projects;
+  }
+
+  static async deleteProject(projectId: string, studentId: string) {
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    if (project.studentId !== studentId) {
+      throw new Error('Access denied: This project does not belong to you');
+    }
+
+    if (project.status !== ProjectStatus.DRAFT) {
+      throw new Error('Only draft projects can be deleted');
+    }
+
+    await ProjectModel.findByIdAndDelete(projectId);
+    return null;
+  }
+}

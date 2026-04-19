@@ -28,4 +28,10 @@ router.post('/:id/reject', authenticate, requireRole('admin'), RoadmapController
 // POST /api/roadmaps/:id/activate - activate roadmap (admin only)
 router.post('/:id/activate', authenticate, requireRole('admin'), RoadmapController.activateRoadmap);
 
+// POST /api/roadmaps/:roadmapId/milestones/:milestoneId/complete - complete milestone (students only)
+router.post('/:roadmapId/milestones/:milestoneId/complete', authenticate, requireRole('student'), RoadmapController.completeMilestone);
+
+// POST /api/roadmaps/:roadmapId/activate-next-milestone - activate next milestone (students only)
+router.post('/:roadmapId/activate-next-milestone', authenticate, requireRole('student'), RoadmapController.activateNextMilestone);
+
 export default router;
