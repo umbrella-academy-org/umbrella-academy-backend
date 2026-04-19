@@ -80,7 +80,7 @@ export class RoadmapService {
   }
 
   static async approveRoadmap(roadmapId: string, adminId: string) {
-    const roadmap = await RoadmapModel.findOne({ id: roadmapId });
+    const roadmap = await RoadmapModel.findById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
     }
@@ -90,7 +90,7 @@ export class RoadmapService {
     }
 
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
-      { id: roadmapId },
+      { _id: roadmapId },
       {
         status: 'approved',
         approvedBy: adminId,

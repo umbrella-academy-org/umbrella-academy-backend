@@ -32,6 +32,7 @@ export interface Milestone {
 }
 
 export interface Roadmap extends Document {
+  id:string
   studentId: string;
   trainerId: string;
   title: string;
@@ -63,6 +64,7 @@ const MilestoneSchema = new Schema<Milestone>({
 });
 
 const RoadmapSchema = new Schema<Roadmap>({
+  
   studentId: { type: String, required: true },
   trainerId: { type: String, required: true },
   title: { type: String, required: true },
@@ -77,6 +79,21 @@ const RoadmapSchema = new Schema<Roadmap>({
   milestones: [MilestoneSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+});
+
+// Virtual field to convert _id to id
+RoadmapSchema.virtual('id').get(function(this: any) {
+  return this._id.toHexString();
+});
+
+// Ensure virtual fields are included in JSON output
+RoadmapSchema.set('toJSON', {
+  virtuals: true,
+  transform: function(doc, ret: any) {
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
 });
 
 

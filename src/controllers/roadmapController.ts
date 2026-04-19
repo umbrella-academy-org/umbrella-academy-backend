@@ -100,6 +100,8 @@ export class RoadmapController {
       const { userId } = req.user!;
       const roadmapId = req.params.id as string;
 
+      console.log(req.params.id)
+
       const roadmap = await RoadmapService.approveRoadmap(roadmapId, userId);
       res.json({ 
         success: true, 
