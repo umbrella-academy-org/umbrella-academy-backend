@@ -181,7 +181,7 @@ export class RoadmapService {
     return updatedRoadmap;
   }
 
-  static async completeMilestone(roadmapId: string, milestoneId: string, studentId: string, trainerFeedback?: string) {
+  static async completeMilestone(roadmapId: string, milestoneId: number, studentId: string, projectData: any) {
     const roadmap = await RoadmapModel.findById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
@@ -192,7 +192,7 @@ export class RoadmapService {
     }
 
     // Find the milestone in the roadmap
-    const milestone = roadmap.milestones.find(m => m.order === parseInt(milestoneId));
+    const milestone = roadmap.milestones.find(m => m.order == milestoneId);
     if (!milestone) {
       throw new Error('Milestone not found in this roadmap');
     }
@@ -201,17 +201,66 @@ export class RoadmapService {
       throw new Error('Milestone must be active or locked to be completed');
     }
 
-    // Update milestone status
+    // Create a project automatically from the submission data
+    const { ProjectService } = await import('./projectService');
+    const project = await ProjectService.createProject({
+      ...projectData,
+      roadmapId,
+      milestoneId,
+      title: `${milestone.title} - Project Submission`,
+      description: `Project submission for milestone: ${milestone.title}`,
+      category: 'Milestone Project',
+      studentRole: 'Student'
+    }, studentId);
+
+    // Submit the project for approval
+    await ProjectService.submitProject(project.id, studentId);
+
+    // Update milestone status to pending-approval
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
       {
         _id: roadmapId,
-        'milestones._id': milestoneId
+        'milestones.order': milestoneId
+      },
+      {
+        $set: {
+          'milestones.$.status': 'pending-approval',
+          updatedAt: new Date()
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    return { roadmap: updatedRoadmap, project };
+  }
+
+  static async approveMilestone(roadmapId: string, milestoneId: number, trainerId: string, feedback?: string) {
+    const roadmap = await RoadmapModel.findById(roadmapId);
+    if (!roadmap) {
+      throw new Error('Roadmap not found');
+    }
+
+    // Find the milestone in the roadmap
+    const milestone = roadmap.milestones.find(m => m.order == milestoneId);
+    if (!milestone) {
+      throw new Error('Milestone not found in this roadmap');
+    }
+
+    if (milestone.status !== 'pending-approval') {
+      throw new Error('Milestone must be in pending-approval status to be approved');
+    }
+
+    // Update milestone status to completed
+    const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
+      {
+        _id: roadmapId,
+        'milestones.order': milestoneId
       },
       {
         $set: {
           'milestones.$.status': 'completed',
           'milestones.$.completedAt': new Date(),
-          'milestones.$.trainerFeedback': trainerFeedback || null,
+          'milestones.$.trainerFeedback': feedback || null,
           updatedAt: new Date()
         }
       },
@@ -227,7 +276,7 @@ export class RoadmapService {
       });
 
       // Update student onboarding status
-      await StudentModel.findByIdAndUpdate(studentId, {
+      await StudentModel.findByIdAndUpdate(roadmap.studentId, {
         'onboardingStatus.learningCompleted': true
       });
     }
@@ -253,7 +302,7 @@ export class RoadmapService {
 
     // Update the next milestone to active
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
-      {
+      { 
         _id: roadmapId,
         'milestones.order': nextMilestone.order
       },

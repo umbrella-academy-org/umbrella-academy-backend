@@ -184,13 +184,13 @@ export class RoadmapController {
     try {
       const { userId } = req.user!;
       const { roadmapId, milestoneId } = req.params as { roadmapId: string, milestoneId: string };
-      const { trainerFeedback } = req.body as { trainerFeedback?: string };
+      const projectData = req.body; // Project evidence data
 
-      const roadmap = await RoadmapService.completeMilestone(roadmapId, milestoneId, userId, trainerFeedback);
+      const result = await RoadmapService.completeMilestone(roadmapId, parseInt(milestoneId), userId, projectData);
       res.json({ 
         success: true, 
-        data: roadmap,
-        message: 'Milestone completed successfully' 
+        data: result,
+        message: 'Milestone submitted for approval successfully. Project created and submitted.' 
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -204,6 +204,35 @@ export class RoadmapController {
           return res.status(403).json({ success: false, message: err.message });
         }
         if (err.message === 'Milestone must be active or locked to be completed') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  // POST /api/roadmaps/:roadmapId/milestones/:milestoneId/approve - approve milestone (trainers only)
+  static async approveMilestone(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const { roadmapId, milestoneId } = req.params as { roadmapId: string, milestoneId: string };
+      const { feedback } = req.body as { feedback?: string };
+
+      const roadmap = await RoadmapService.approveMilestone(roadmapId, parseInt(milestoneId), userId, feedback);
+      res.json({ 
+        success: true, 
+        data: roadmap,
+        message: 'Milestone approved successfully' 
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Milestone not found in this roadmap') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Milestone must be in pending-approval status to be approved') {
           return res.status(400).json({ success: false, message: err.message });
         }
       }

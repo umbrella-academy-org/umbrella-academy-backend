@@ -31,6 +31,9 @@ router.post('/:id/activate', authenticate, requireRole('admin'), RoadmapControll
 // POST /api/roadmaps/:roadmapId/milestones/:milestoneId/complete - complete milestone (students only)
 router.post('/:roadmapId/milestones/:milestoneId/complete', authenticate, requireRole('student'), RoadmapController.completeMilestone);
 
+// POST /api/roadmaps/:roadmapId/milestones/:milestoneId/approve - approve milestone (trainers only)
+router.post('/:roadmapId/milestones/:milestoneId/approve', authenticate, requireRole('trainer'), RoadmapController.approveMilestone);
+
 // POST /api/roadmaps/:roadmapId/activate-next-milestone - activate next milestone (students only)
 router.post('/:roadmapId/activate-next-milestone', authenticate, requireRole('student'), RoadmapController.activateNextMilestone);
 

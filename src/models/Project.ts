@@ -19,6 +19,8 @@ export interface ProjectEvidence {
 export interface Project extends Document {
   id: string;
   studentId: string;
+  roadmapId?: string;           // Link to roadmap
+  milestoneId?: number;        // Link to milestone (order number)
   title: string;
   description: string;
   category: string;             // e.g., "Robotics", "UI/UX", "Coding"
@@ -54,6 +56,8 @@ const AttachmentsSchema = new Schema({
 
 const ProjectSchema = new Schema<Project>({
   studentId: { type: String, required: true },
+  roadmapId: { type: String, default: undefined }, // Link to roadmap
+  milestoneId: { type: Number, default: undefined }, // Link to milestone (order number)
   title: { type: String, required: true },
   description: { type: String, required: true },
   category: { type: String, required: true },
@@ -61,28 +65,28 @@ const ProjectSchema = new Schema<Project>({
   studentRole: { type: String, required: true },
   evidence: { type: ProjectEvidenceSchema, default: () => ({}) },
   attachments: { type: AttachmentsSchema, default: () => ({ images: [], pdfs: [] }) },
-  status: { 
-    type: String, 
-    enum: Object.values(ProjectStatus), 
-    default: 'draft',
-    required: true 
+  status: {
+    type: String,
+    enum: Object.values(ProjectStatus),
+    default: ProjectStatus.DRAFT,
+    required: true
   },
   trainerFeedback: { type: String, default: undefined },
   approvedByTrainerId: { type: String, default: undefined },
   approvedAt: { type: Date, default: undefined },
-  isPublic: { type: Boolean, required: true },
+  isPublic: { type: Boolean, default:true },
   createdAt: { type: Date, default: Date.now }
 });
 
 // Virtual field to convert _id to id
-ProjectSchema.virtual('id').get(function(this: any) {
+ProjectSchema.virtual('id').get(function (this: any) {
   return this._id.toHexString();
 });
 
 // Ensure virtual fields are included in JSON output
 ProjectSchema.set('toJSON', {
   virtuals: true,
-  transform: function(doc, ret: any) {
+  transform: function (doc, ret: any) {
     delete ret._id;
     delete ret.__v;
     return ret;

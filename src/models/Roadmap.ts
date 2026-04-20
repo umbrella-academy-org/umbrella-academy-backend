@@ -15,8 +15,11 @@ export enum BookingStatus {
 export enum RoadmapStepStatus {
   LOCKED = 'locked',
   ACTIVE = 'active',
-  COMPLETED = 'completed'
+  COMPLETED = 'completed',
+  PENDING_APPROVAL = 'pending-approval'
 }
+
+
 
 export interface Milestone {
   title: string;
@@ -29,6 +32,8 @@ export interface Milestone {
   status: RoadmapStepStatus;
   completedAt: Date | null;
   trainerFeedback?: string;
+  submittedProjectIds?: string[]; // Track submitted projects for this milestone
+  completedProjectIds?: string[]; // Track approved projects for this milestone
 }
 
 export interface Roadmap extends Document {
@@ -60,7 +65,9 @@ const MilestoneSchema = new Schema<Milestone>({
     required: true 
   },
   completedAt: { type: Date, default: null },
-  trainerFeedback: { type: String, default: undefined }
+  trainerFeedback: { type: String, default: undefined },
+  submittedProjectIds: [{ type: String, default: [] }], // Track submitted projects for this milestone
+  completedProjectIds: [{ type: String, default: [] }] // Track approved projects for this milestone
 });
 
 const RoadmapSchema = new Schema<Roadmap>({

@@ -1,5 +1,6 @@
 import { ProjectModel, ProjectStatus } from '../models/Project';
 import { StudentModel } from '../models/User';
+import { RoadmapModel } from '../models/Roadmap';
 
 export class ProjectService {
   static async createProject(projectData: any, studentId: string) {
@@ -7,6 +8,24 @@ export class ProjectService {
     const student = await StudentModel.findById(studentId);
     if (!student) {
       throw new Error('Student not found');
+    }
+
+    // Validate milestone linking if provided
+    if (projectData.milestoneId && projectData.roadmapId) {
+      const roadmap = await RoadmapModel.findById(projectData.roadmapId);
+      if (!roadmap) {
+        throw new Error('Roadmap not found');
+      }
+
+      if (roadmap.studentId !== studentId) {
+        throw new Error('Access denied: This roadmap does not belong to the student');
+      }
+
+      // Check if milestone exists in the roadmap
+      const milestone = roadmap.milestones.find(m => m.order == projectData.milestoneId);
+      if (!milestone) {
+        throw new Error('Milestone not found in this roadmap');
+      }
     }
 
     const project = new ProjectModel({
@@ -100,6 +119,25 @@ export class ProjectService {
       { new: true, runValidators: true }
     );
 
+    // Add project to milestone's submitted projects if linked
+    if (project.roadmapId && project.milestoneId) {
+      try {
+        const roadmap = await RoadmapModel.findById(project.roadmapId);
+        if (roadmap) {
+          const milestone = roadmap.milestones.find(m => m.order == parseInt(project.milestoneId!.toString()));
+          if (milestone) {
+            milestone.submittedProjectIds = milestone.submittedProjectIds || [];
+            if (!milestone.submittedProjectIds.includes(projectId)) {
+              milestone.submittedProjectIds.push(projectId);
+              await roadmap.save();
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to add project to milestone tracking:', error);
+      }
+    }
+
     return updatedProject;
   }
 
@@ -124,6 +162,36 @@ export class ProjectService {
       },
       { new: true, runValidators: true }
     );
+
+    // Add project to milestone's completed projects and complete the milestone if linked
+    if (project.roadmapId && project.milestoneId) {
+      try {
+        // Add project to milestone's completed projects
+        const roadmap = await RoadmapModel.findById(project.roadmapId);
+        if (roadmap) {
+          const milestone = roadmap.milestones.find(m => m.order == parseInt(project.milestoneId!.toString()));
+          if (milestone) {
+            milestone.completedProjectIds = milestone.completedProjectIds || [];
+            if (!milestone.completedProjectIds.includes(projectId)) {
+              milestone.completedProjectIds.push(projectId);
+              await roadmap.save();
+            }
+          }
+        }
+
+        // Import RoadmapService to avoid circular dependency
+        const { RoadmapService } = await import('./roadmapService');
+        await RoadmapService.approveMilestone(
+          project.roadmapId, 
+          project.milestoneId, 
+          trainerId, 
+          feedback
+        );
+      } catch (error) {
+        // Log error but don't fail the project approval
+        console.warn('Failed to complete linked milestone:', error);
+      }
+    }
 
     return updatedProject;
   }
