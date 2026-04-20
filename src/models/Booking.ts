@@ -25,8 +25,8 @@ export interface TrainerApprovalRequest {
 
 export interface Booking extends Document {
   id: string;
-  studentId: string;
-  trainerId: string;
+  student: string;
+  trainer: string;
   requestedTime: Date;
   learningGoals: string;
   status: BookingStatus;
@@ -46,8 +46,8 @@ export interface Booking extends Document {
 // Booking Schema
 const BookingSchema = new Schema<Booking>({
   id: { type: String, required: true, unique: true },
-  studentId: { type: String, required: true, ref: 'User' },
-  trainerId: { type: String, required: true, ref: 'User' },
+  student: { type: String, required: true, ref: 'User' },
+  trainer: { type: String, required: true, ref: 'User' },
   requestedTime: { type: Date, required: true },
   learningGoals: { type: String, required: true },
   status: {
@@ -73,8 +73,8 @@ const BookingSchema = new Schema<Booking>({
 });
 
 // Indexes for better query performance
-BookingSchema.index({ studentId: 1, status: 1 });
-BookingSchema.index({ trainerId: 1, status: 1 });
+BookingSchema.index({ student: 1, status: 1 });
+BookingSchema.index({ trainer: 1, status: 1 });
 BookingSchema.index({ requestedTime: 1 });
 
 export const BookingModel = model<Booking>('Booking', BookingSchema);

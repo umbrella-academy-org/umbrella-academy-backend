@@ -6,13 +6,15 @@ export class RoadmapService {
     let filter: Record<string, unknown> = {};
 
     if (role === 'student') {
-      filter = { studentId: userId };
+      filter = { student: userId };
     } else if (role === 'trainer') {
-      filter = { trainerId: userId };
+      filter = { trainer: userId };
     }
     // admin: no filter - return all
 
-    return await RoadmapModel.find(filter);
+    return await RoadmapModel.find(filter)
+      .populate('student','firstName lastName email')
+      .populate('trainer','firstName lastName email');
   }
 
   static async createRoadmap(roadmapData: any, trainerId: string) {
@@ -45,8 +47,8 @@ export class RoadmapService {
 
     const data = {
       id: roadmapId,
-      studentId: roadmapData.studentId,
-      trainerId,
+      student: roadmapData.studentId,
+      trainer:trainerId,
       title: roadmapData.title,
       status: roadmapData.status || 'draft', // Default to draft
       milestones: processedMilestones,
@@ -58,7 +60,9 @@ export class RoadmapService {
   }
 
   static async findRoadmapById(id: string) {
-    return await RoadmapModel.findById(id);
+    return await RoadmapModel.findById(id)
+      .populate('student')
+      .populate('trainer');
   }
 
   static async updateRoadmap(id: string, updateData: any) {
@@ -101,7 +105,7 @@ export class RoadmapService {
     );
 
     // Update student onboarding status
-    await StudentModel.findByIdAndUpdate(roadmap.studentId, {
+    await StudentModel.findByIdAndUpdate(roadmap.student, {
       'onboardingStatus.roadmapReceived': true
     });
 
@@ -174,7 +178,7 @@ export class RoadmapService {
     );
 
     // Update student onboarding status
-    await StudentModel.findByIdAndUpdate(roadmap.studentId, {
+    await StudentModel.findByIdAndUpdate(roadmap.student, {
       'onboardingStatus.learningStarted': true
     });
 
@@ -187,7 +191,7 @@ export class RoadmapService {
       throw new Error('Roadmap not found');
     }
 
-    if (roadmap.studentId !== studentId) {
+    if (roadmap.student !== studentId) {
       throw new Error('Access denied: This roadmap does not belong to the student');
     }
 
@@ -276,7 +280,7 @@ export class RoadmapService {
       });
 
       // Update student onboarding status
-      await StudentModel.findByIdAndUpdate(roadmap.studentId, {
+      await StudentModel.findByIdAndUpdate(roadmap.student, {
         'onboardingStatus.learningCompleted': true
       });
     }
@@ -290,7 +294,7 @@ export class RoadmapService {
       throw new Error('Roadmap not found');
     }
 
-    if (roadmap.studentId !== studentId) {
+    if (roadmap.student !== studentId) {
       throw new Error('Access denied: This roadmap does not belong to the student');
     }
 

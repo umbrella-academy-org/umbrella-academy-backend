@@ -37,12 +37,12 @@ export interface Milestone {
 }
 
 export interface Roadmap extends Document {
-  id:string
-  studentId: string;
-  trainerId: string;
+  id: string
+  student: string;
+  trainer: string;
   title: string;
   status: RoadmapStatus;
-  approvedBy?: string; 
+  approvedBy?: string;
   approvedAt?: Date;
   rejectionReason?: string;
   milestones: Milestone[];
@@ -59,10 +59,10 @@ const MilestoneSchema = new Schema<Milestone>({
   requiredProjects: [{ type: String, required: true }],
   estimatedDurationDays: { type: Number, required: true },
   order: { type: Number, required: true },
-  status: { 
-    type: String, 
-    enum: Object.values(RoadmapStepStatus), 
-    required: true 
+  status: {
+    type: String,
+    enum: Object.values(RoadmapStepStatus),
+    required: true
   },
   completedAt: { type: Date, default: null },
   trainerFeedback: { type: String, default: undefined },
@@ -71,14 +71,14 @@ const MilestoneSchema = new Schema<Milestone>({
 });
 
 const RoadmapSchema = new Schema<Roadmap>({
-  
-  studentId: { type: String, required: true },
-  trainerId: { type: String, required: true },
+
+  student: { type: String, ref: 'User', required: true },
+  trainer: { type: String, ref: 'User', required: true },
   title: { type: String, required: true },
-  status: { 
-    type: String, 
-    enum: ['draft', 'pending-approval', 'approved', 'active', 'paused', 'completed', 'rejected'], 
-    default: 'draft' 
+  status: {
+    type: String,
+    enum: ['draft', 'pending-approval', 'approved', 'active', 'paused', 'completed', 'rejected'],
+    default: 'draft'
   },
   approvedBy: { type: String, default: null }, // Admin ID who approved
   approvedAt: { type: Date, default: null },
@@ -89,20 +89,19 @@ const RoadmapSchema = new Schema<Roadmap>({
 });
 
 // Virtual field to convert _id to id
-RoadmapSchema.virtual('id').get(function(this: any) {
+RoadmapSchema.virtual('id').get(function (this: any) {
   return this._id.toHexString();
 });
 
 // Ensure virtual fields are included in JSON output
 RoadmapSchema.set('toJSON', {
   virtuals: true,
-  transform: function(doc, ret: any) {
+  transform: function (doc, ret: any) {
     delete ret._id;
     delete ret.__v;
     return ret;
   }
 });
-
 
 // Models
 export const RoadmapModel = model<Roadmap>('Roadmap', RoadmapSchema);

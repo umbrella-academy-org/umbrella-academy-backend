@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/authService';
-import { ApiResponse } from '@/interfaces/api';
 import { StudentRegister } from '@/interfaces/auth';
 
 export class AuthController {
@@ -9,6 +8,7 @@ export class AuthController {
     try {
       const studentData = req.body as unknown as StudentRegister;
       const response = await AuthService.registerStudent(studentData);
+      await AuthService.sendOtp(studentData.email);
       return res.status(201).json(response);
     } catch (err: any) {
       if (err.code === 11000) {
@@ -23,6 +23,7 @@ export class AuthController {
     try {
       const trainerData = req.body;
       const response = await AuthService.registerTrainer(trainerData);
+      await AuthService.sendOtp(trainerData.email);
       return res.status(201).json(response);
     } catch (err: any) {
       console.error(err);
@@ -84,11 +85,11 @@ export class AuthController {
     try {
       const { token, newPassword } = req.body;
       const response = await AuthService.resetPassword(token, newPassword);
-      
+
       if (!response.success) {
         return res.status(400).json(response);
       }
-      
+
       return res.status(200).json(response);
     } catch (err) {
       next(err);

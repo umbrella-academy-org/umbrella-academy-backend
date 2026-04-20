@@ -67,8 +67,8 @@ export class BookingService {
 
     const booking = await BookingModel.create({
       id: bookingId,
-      studentId,
-      trainerId,
+      student: studentId,
+      trainer: trainerId,
       requestedTime: requestedDate,
       learningGoals,
       status: BookingStatus.PENDING
@@ -83,31 +83,31 @@ export class BookingService {
   }
 
   static async getStudentBookings(studentId: string, status?: BookingStatus) {
-    const filter: any = { studentId };
+    const filter: any = { student: studentId };
     if (status) {
       filter.status = status;
     }
 
     const bookings = await BookingModel.find(filter)
-      .populate('trainerId', 'firstName lastName email')
+      .populate('trainer', 'firstName lastName email')
       .sort({ createdAt: -1 });
     return bookings;
   }
   static async getTrainerBookings(trainerId: string, bookingStatus?: BookingStatus) {
-    const filter: any = { trainerId };
+    const filter: any = { trainer: trainerId };
     if (bookingStatus) {
       filter.status = bookingStatus;
     }
 
     const bookings = await BookingModel.find(filter)
-      .populate('studentId', 'firstName lastName email')
+      .populate('student', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
     return bookings;
   }
 
   static async approveBooking(bookingId: string, trainerId: string, approvalData: TrainerApprovalRequest) {
-    const booking = await BookingModel.findOne({ id: bookingId, trainerId });
+    const booking = await BookingModel.findOne({ id: bookingId, trainer: trainerId });
     if (!booking) {
       throw new Error('Booking not found');
     }
@@ -138,19 +138,19 @@ export class BookingService {
     booking.sessionLocation = sessionLocation;
     booking.preparationRequirements = preparationRequirements;
     booking.nextSteps = nextSteps;
-    
+
     await booking.save();
 
     // Assign trainer to student
-    await StudentModel.findByIdAndUpdate(booking.studentId, {
-      assignedTrainerId: trainerId
+    await StudentModel.findByIdAndUpdate(booking.student, {
+      assignedTrainer: trainerId
     });
 
     return booking;
   }
 
   static async rejectBooking(bookingId: string, trainerId: string, rejectionReason: string) {
-    const booking = await BookingModel.findOne({ id: bookingId, trainerId });
+    const booking = await BookingModel.findOne({ id: bookingId, trainer: trainerId });
     if (!booking) {
       throw new Error('Booking not found');
     }
@@ -164,7 +164,7 @@ export class BookingService {
     await booking.save();
 
     // Update student's onboarding status
-    await StudentModel.findByIdAndUpdate(booking.studentId, {
+    await StudentModel.findByIdAndUpdate(booking.student, {
       'onboardingStatus.orientationBooked': false
     });
 
@@ -172,7 +172,7 @@ export class BookingService {
   }
 
   static async completeBooking(bookingId: string, trainerId: string) {
-    const booking = await BookingModel.findOne({ id: bookingId, trainerId });
+    const booking = await BookingModel.findOne({ id: bookingId, trainer: trainerId });
     if (!booking) {
       throw new Error('Booking not found');
     }
@@ -195,11 +195,11 @@ export class BookingService {
     }
 
     // Check if user has permission to cancel
-    if (userRole === 'student' && booking.studentId !== userId) {
+    if (userRole === 'student' && booking.student !== userId) {
       throw new Error('You can only cancel your own bookings');
     }
 
-    if (userRole === 'trainer' && booking.trainerId !== userId) {
+    if (userRole === 'trainer' && booking.trainer !== userId) {
       throw new Error('You can only cancel your own bookings');
     }
 
@@ -215,8 +215,8 @@ export class BookingService {
     await booking.save();
 
     // Update student's onboarding status if this was an orientation booking
-    if (booking.studentId === userId) {
-      await StudentModel.findByIdAndUpdate(booking.studentId, {
+    if (booking.student === userId) {
+      await StudentModel.findByIdAndUpdate(booking.student, {
         'onboardingStatus.orientationBooked': false
       });
     }
@@ -235,8 +235,8 @@ export class BookingService {
 
   static async getBookingById(bookingId: string) {
     const booking = await BookingModel.findOne({ id: bookingId })
-      .populate('studentId', 'firstName lastName email')
-      .populate('trainerId', 'firstName lastName email');
+      .populate('student', 'firstName lastName email')
+      .populate('trainer', 'firstName lastName email');
 
     if (!booking) {
       throw new Error('Booking not found');
@@ -252,8 +252,8 @@ export class BookingService {
     }
 
     const bookings = await BookingModel.find(filter)
-      .populate('studentId', 'firstName lastName email')
-      .populate('trainerId', 'firstName lastName email')
+      .populate('student', 'firstName lastName email')
+      .populate('trainer', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
     return bookings;

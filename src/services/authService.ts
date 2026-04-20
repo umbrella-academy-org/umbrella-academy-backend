@@ -89,7 +89,7 @@ export class AuthService {
 
   static async verifyOtp(email: string, otp: string) {
     const user = await UserModel.findOne({ email: email?.toLowerCase() });
-
+    console.log(email)
     if (!user || !user.otpCode || !user.otpExpiry) {
       return { success: false, message: 'Invalid or expired OTP' };
     }
@@ -99,6 +99,7 @@ export class AuthService {
     }
 
     const isValid = await bcrypt.compare(otp, user.otpCode);
+    console.log(isValid)
     if (!isValid) {
       return { success: false, message: 'Invalid or expired OTP' };
     }
@@ -115,19 +116,20 @@ export class AuthService {
       const hashedOtp = await bcrypt.hash(otp, 10);
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-      await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
-
+      const w = await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
+      console.log(bcrypt.compareSync(otp, hashedOtp))
       try {
         await sendEmail({
           to_email: email,
           to_name: user.firstName || 'User',
           subject: 'Your Dreamize Verification Code',
-          message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
+          message: `Your verification code is: ${otp}\n\nThis code expiresn in 10 minutes. Do not share it with anyone.`
         });
-      } catch {
-        console.error('Error sending OTP');
+      } catch (error) {
+        console.error('Error sending OTP', error);
       }
     }
+    console.log("How how")
 
     return { success: true };
   }
@@ -176,7 +178,7 @@ export class AuthService {
     return { success: true };
   }
 
-  
+
   static async login(email: string, password: string) {
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     if (!user) {

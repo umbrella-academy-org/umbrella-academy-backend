@@ -58,7 +58,7 @@ export class RoadmapController {
         return res.status(404).json({ success: false, message: 'Roadmap not found' });
       }
 
-      if (roadmap.trainerId !== userId) {
+      if (roadmap.trainer !== userId) {
         return res.status(403).json({ success: false, message: 'Access denied' });
       }
 
