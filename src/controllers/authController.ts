@@ -23,6 +23,7 @@ export class AuthController {
     try {
       const trainerData = req.body;
       const response = await AuthService.registerTrainer(trainerData);
+      
       return res.status(201).json(response);
     } catch (err: any) {
       console.error(err);
