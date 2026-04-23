@@ -17,6 +17,7 @@ import systemRoutes from './routes/system';
 import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payments';
 import bookingRoutes from './routes/bookings';
+import projectRoutes from './routes/projects'; // Importing projects route
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/projects', projectRoutes); // Importing projects route
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

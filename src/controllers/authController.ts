@@ -9,6 +9,7 @@ export class AuthController {
     try {
       const studentData = req.body as unknown as StudentRegister;
       const response = await AuthService.registerStudent(studentData);
+      await AuthService.sendOtp(studentData.email);
       return res.status(201).json(response);
     } catch (err: any) {
       if (err.code === 11000) {
@@ -23,7 +24,7 @@ export class AuthController {
     try {
       const trainerData = req.body;
       const response = await AuthService.registerTrainer(trainerData);
-      
+      await AuthService.sendOtp(trainerData.email);
       return res.status(201).json(response);
     } catch (err: any) {
       console.error(err);
