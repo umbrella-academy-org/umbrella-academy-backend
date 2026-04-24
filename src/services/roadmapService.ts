@@ -1,3 +1,4 @@
+import { response } from 'express';
 import { RoadmapModel } from '../models/Roadmap';
 import { StudentModel } from '../models/User';
 
@@ -197,6 +198,8 @@ export class RoadmapService {
       throw new Error('Milestone not found in this roadmap');
     }
 
+  
+
     if (milestone.status !== 'active' && milestone.status !== 'locked') {
       throw new Error('Milestone must be active or locked to be completed');
     }
@@ -244,6 +247,10 @@ export class RoadmapService {
     const milestone = roadmap.milestones.find(m => m.order == milestoneId);
     if (!milestone) {
       throw new Error('Milestone not found in this roadmap');
+    }
+
+      if (milestone.status === 'completed') {
+      return roadmap
     }
 
     if (milestone.status !== 'pending-approval') {
@@ -302,7 +309,7 @@ export class RoadmapService {
 
     // Update the next milestone to active
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
-      { 
+      {
         _id: roadmapId,
         'milestones.order': nextMilestone.order
       },
