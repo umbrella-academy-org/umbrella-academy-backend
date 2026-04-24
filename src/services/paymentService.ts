@@ -144,10 +144,10 @@ export class PaymentService {
   }
 
   static async getPaymentStatus(studentId: string, paymentType?: PaymentType) {
-    const filter: any = { studentId };
-    if (paymentType) {
-      filter.type = paymentType;
-    }
+
+    const filter: any = {};
+    if (studentId) filter.studentId = studentId;
+    if (paymentType) filter.type = paymentType;
 
     const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
     return payments;

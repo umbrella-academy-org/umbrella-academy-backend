@@ -196,7 +196,7 @@ export class PaymentController {
       if (studentId) filter.studentId = studentId;
       if (type) filter.type = type;
       if (status) filter.status = status;
-
+      console.log(studentId, type, status);
       const payments = await PaymentService.getPaymentStatus('', type);
 
       res.json({

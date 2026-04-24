@@ -24,11 +24,5 @@ router.get('/history', authenticate, requireRole('student'), PaymentController.g
 // POST /payments/confirm - confirm payment (no auth required for webhooks)
 router.post('/confirm', PaymentController.confirmPayment);
 
-// Admin payment management endpoints
-// GET /payments/admin/payments - get all payments (admin only)
-router.get('/admin/payments', authenticate, requireRole('admin'), PaymentController.getAllPayments);
-
-// GET /payments/admin/subscriptions - get all subscriptions (admin only)
-router.get('/admin/subscriptions', authenticate, requireRole('admin'), PaymentController.getAllSubscriptions);
 
 export default router;
