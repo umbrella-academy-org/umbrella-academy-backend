@@ -216,7 +216,7 @@ export class RoadmapController {
     try {
       const { userId } = req.user!;
       const { roadmapId, milestoneId } = req.params as { roadmapId: string, milestoneId: string };
-      const { feedback } = req.body as { feedback?: string };
+      const { feedback } = req.body as { feedback: string };
 
       const roadmap = await RoadmapService.approveMilestone(roadmapId, parseInt(milestoneId), userId, feedback);
       res.json({ 

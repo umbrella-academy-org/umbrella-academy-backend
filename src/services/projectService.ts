@@ -142,7 +142,7 @@ export class ProjectService {
     return updatedProject;
   }
 
-  static async approveProject(projectId: string, trainerId: string, feedback?: string) {
+  static async approveProject(projectId: string, trainerId: string, feedback: string) {
     const project = await ProjectModel.findById(projectId);
     if (!project) {
       throw new Error('Project not found');

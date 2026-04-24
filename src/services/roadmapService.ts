@@ -237,7 +237,7 @@ export class RoadmapService {
     return { roadmap: updatedRoadmap, project };
   }
 
-  static async approveMilestone(roadmapId: string, milestoneId: number, trainerId: string, feedback?: string) {
+  static async approveMilestone(roadmapId: string, milestoneId: number, trainerId: string, feedback: string) {
     const roadmap = await RoadmapModel.findById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
