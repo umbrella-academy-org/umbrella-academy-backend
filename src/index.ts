@@ -59,7 +59,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// initSocket(server);
+initSocket(server);
 
 const startServer = async () => {
   try {
