@@ -108,12 +108,15 @@ export class PaymentService {
     const transactionRef = this.generateTransactionRef();
     const paymentId = this.generatePaymentId();
 
+    const discountAmount = promoCodeApplied ? this.SUBSCRIPTION_FEE - finalAmount : 0;
+
     const payment = await PaymentModel.create({
       id: paymentId,
       studentId,
       type: PaymentType.SUBSCRIPTION,
       amount: this.SUBSCRIPTION_FEE,
       promoCodeApplied,
+      discountAmount,
       finalAmount,
       transactionRef,
       status: 'success',
@@ -134,7 +137,7 @@ export class PaymentService {
       payment,
       amount: finalAmount,
       originalAmount: this.SUBSCRIPTION_FEE,
-      discountApplied: promoCodeApplied ? this.SUBSCRIPTION_FEE - finalAmount : 0
+      discountApplied: discountAmount
     };
   }
 
@@ -166,6 +169,11 @@ export class PaymentService {
     if (studentId) filter.studentId = studentId;
     if (paymentType) filter.type = paymentType;
 
+    const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
+    return payments;
+  }
+
+  static async getPaymentStatusWithFilter(filter: any) {
     const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
     return payments;
   }
