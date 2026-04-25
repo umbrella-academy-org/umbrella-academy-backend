@@ -20,6 +20,7 @@ import bookingRoutes from './routes/bookings';
 import projectRoutes from './routes/projects'; // Importing projects route
 import promoCodeRoutes from './routes/promoCodes';
 import promoCodePublicRoutes from './routes/promoCodesPublic';
+import guardianRoutes from './routes/guardian';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/projects', projectRoutes); // Importing projects route
 app.use('/api/admin/promo-codes', promoCodeRoutes);
 app.use('/api/promo-codes', promoCodePublicRoutes);
+app.use('/api/guardian', guardianRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

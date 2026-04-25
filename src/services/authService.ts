@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist } from '../models/User';
 import { sendEmail } from '../services/emailService';
+import { GuardianService } from './guardianService';
 import { ApiResponse } from '@/interfaces/api';
 import { StudentRegister } from '@/interfaces/auth';
 
@@ -32,6 +33,24 @@ export class AuthService {
     const savedStudent = await StudentModel.create(student);
     savedGuardian.linkedStudentIds.push(savedStudent.id);
     await savedGuardian.save();
+
+    // Send guardian invitation email
+    try {
+      const invitationToken = GuardianService.generateInvitationToken(
+        savedGuardian._id.toString(),
+        savedStudent._id.toString()
+      );
+      
+      await GuardianService.sendGuardianInvitation(
+        savedGuardian.email,
+        savedGuardian.firstName,
+        `${savedStudent.firstName} ${savedStudent.lastName}`,
+        invitationToken
+      );
+    } catch (error) {
+      // Log error but don't fail registration if email fails
+      console.warn('Failed to send guardian invitation email:', error);
+    }
 
     const token = AuthService.signToken(String(savedStudent._id), savedStudent.role);
 
