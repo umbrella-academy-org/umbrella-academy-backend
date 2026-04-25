@@ -28,8 +28,8 @@ export class GuardianService {
     try {
       const secret = process.env.JWT_SECRET as string;
       const decoded = jwt.verify(token, secret) as InvitationTokenPayload;
-      
-      if (decoded.type !== 'guardian_invitation') {
+  
+      if (decoded.type != 'guardian_invitation') {
         return null;
       }
       
@@ -46,7 +46,7 @@ export class GuardianService {
     studentName: string,
     invitationToken: string
   ): Promise<void> {
-    const setPasswordUrl = `${process.env.FRONTEND_URL}/guardian/set-password?token=${invitationToken}`;
+    const setPasswordUrl = `${process.env.FRONTEND_URL}/auth/guardian/set-password?token=${invitationToken}`;
     
     await sendEmail({
       to_email: guardianEmail,
@@ -77,8 +77,9 @@ The DREAMIZE-AFRICA Team`
     message?: string;
   }> {
     const payload = this.verifyInvitationToken(token);
+    console.log(payload);
     
-    if (!payload) {
+    if (payload===null) {
       return { valid: false, message: 'Invalid or expired invitation token' };
     }
 
