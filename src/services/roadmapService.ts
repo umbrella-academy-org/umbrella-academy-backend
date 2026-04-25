@@ -49,7 +49,7 @@ export class RoadmapService {
       studentId: roadmapData.studentId,
       trainerId,
       title: roadmapData.title,
-      status: roadmapData.status || 'draft', // Default to draft
+      status: roadmapData.status ,
       milestones: processedMilestones,
       createdAt: new Date(),
       updatedAt: new Date()
