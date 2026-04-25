@@ -40,7 +40,7 @@ export class AuthService {
         savedGuardian._id.toString(),
         savedStudent._id.toString()
       );
-      
+
       await GuardianService.sendGuardianInvitation(
         savedGuardian.email,
         savedGuardian.firstName,
@@ -195,7 +195,7 @@ export class AuthService {
     return { success: true };
   }
 
-  
+
   static async login(email: string, password: string) {
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     if (!user) {
@@ -220,15 +220,18 @@ export class AuthService {
       };
     }
 
+    const token = AuthService.signToken(String(user._id), user.role);
+
     // Block unapproved trainers
     if (user instanceof TrainerModel && user.approvalStatus !== 'approved') {
       return {
-        success: false,
-        message: 'Your application is pending approval.'
+        success: true,
+        message: 'Your application is pending approval.',
+        data: {
+          user, token
+        }
       };
     }
-
-    const token = AuthService.signToken(String(user._id), user.role);
 
     return {
       success: true,
