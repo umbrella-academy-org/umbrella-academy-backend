@@ -105,7 +105,8 @@ export class RoadmapService {
 
     // Update student onboarding status
     await StudentModel.findByIdAndUpdate(roadmap.studentId, {
-      'onboardingStatus.roadmapReceived': true
+      'onboardingStatus.roadmapReceived': true,
+      'onboardingStatus.learningStarted': true
     });
 
     return updatedRoadmap;
