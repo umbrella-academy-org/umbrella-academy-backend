@@ -206,16 +206,18 @@ export class RoadmapService {
       throw new Error('Milestone must be active or locked to be completed');
     }
 
-    // Create a project automatically from the submission data
+    // Create a project from the submission data (use student's input or fallback to defaults)
     const { ProjectService } = await import('./projectService');
     const project = await ProjectService.createProject({
-      ...projectData,
       roadmapId,
       milestoneId,
-      title: `${milestone.title} - Project Submission`,
-      description: `Project submission for milestone: ${milestone.title}`,
-      category: 'Milestone Project',
-      studentRole: 'Student'
+      title: projectData.title || `${milestone.title} - Project Submission`,
+      description: projectData.description || `Project submission for milestone: ${milestone.title}`,
+      category: projectData.category || 'Milestone Project',
+      studentRole: projectData.studentRole || 'Student',
+      toolsUsed: projectData.toolsUsed || [],
+      evidence: projectData.evidence || {},
+      attachments: projectData.attachments || { images: [], pdfs: [] }
     }, studentId);
 
     // Submit the project for approval
