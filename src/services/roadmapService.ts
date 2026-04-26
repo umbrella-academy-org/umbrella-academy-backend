@@ -13,7 +13,9 @@ export class RoadmapService {
     }
     // admin: no filter - return all
 
-    return await RoadmapModel.find(filter);
+    return await RoadmapModel.find(filter)
+    .populate('studentId', 'firstName lastName email')
+    .populate('trainerId', 'firstName lastName email');
   }
 
   static async createRoadmap(roadmapData: any, trainerId: string) {
