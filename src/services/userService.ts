@@ -73,7 +73,6 @@ export class UserService {
       role, 
       firstName, 
       lastName, 
-      status: 'active', 
       isVerified: true 
     });
     

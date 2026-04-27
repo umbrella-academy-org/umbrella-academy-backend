@@ -35,7 +35,6 @@ export class AdminService {
 
     // Update trainer status and approval details
     trainer.approvalStatus = 'approved';
-    trainer.status = 'active';
     trainer.approvedBy = adminId;
     trainer.approvedAt = new Date();
     await trainer.save();
@@ -68,7 +67,6 @@ export class AdminService {
 
     // Update trainer status and rejection details
     trainer.approvalStatus = 'rejected';
-    trainer.status = 'inactive';
     trainer.approvedBy = adminId;
     trainer.approvedAt = new Date();
     trainer.rejectionReason = rejectionReason;

@@ -122,10 +122,17 @@ export class AuthService {
       return { success: false, message: 'Invalid or expired OTP' };
     }
 
-    await UserModel.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 }, isVerified: true }, { new: true });
+   const savedUser = await UserModel.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 }, isVerified: true }, { new: true });
 
-    return { success: true, verified: true };
-  }
+    return {
+      success: true,
+      data: {
+        user: savedUser?.toJSON(),
+        token: this.signToken(String(user._id), user.role)
+      }
+    }
+  };
+
 
   static async resendOtp(email: string) {
     const user = await UserModel.findOne({ email: email?.toLowerCase() });
@@ -220,7 +227,7 @@ export class AuthService {
       };
     }
 
-    const token = AuthService.signToken(String(user._id), user.role);
+    const token = this.signToken(String(user._id), user.role);
 
     // Block unapproved trainers
     if (user instanceof TrainerModel && user.approvalStatus !== 'approved') {
