@@ -47,9 +47,11 @@ export class AuthService {
         `${savedStudent.firstName} ${savedStudent.lastName}`,
         invitationToken
       );
+
+      await this.sendOtp(savedStudent.email)
     } catch (error) {
       // Log error but don't fail registration if email fails
-      console.warn('Failed to send guardian invitation email:', error);
+      console.warn('Failed to send guardian invitation and student otp email:', error);
     }
 
     const token = AuthService.signToken(String(savedStudent._id), savedStudent.role);
