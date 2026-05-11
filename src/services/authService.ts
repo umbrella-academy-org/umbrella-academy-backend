@@ -124,7 +124,7 @@ export class AuthService {
       return { success: false, message: 'Invalid or expired OTP' };
     }
 
-   const savedUser = await UserModel.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 }, isVerified: true }, { new: true });
+    const savedUser = await UserModel.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 }, isVerified: true }, { new: true });
 
     return {
       success: true,
@@ -237,7 +237,8 @@ export class AuthService {
         success: true,
         message: 'Your application is pending approval.',
         data: {
-          user, token
+          user, 
+          token
         }
       };
     }
