@@ -55,6 +55,7 @@ app.use('/api/guardian', guardianRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.log(err)
   const status = err.status || err.statusCode || 500;
   res.status(status).json({
     success: false,

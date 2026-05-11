@@ -42,8 +42,8 @@ export class UserService {
     }
 
     const updated = await UserModel.findByIdAndUpdate(
-      userId, 
-      { status }, 
+      userId,
+      { status },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -67,25 +67,25 @@ export class UserService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await UserModel.create({ 
-      email, 
-      password: hashedPassword, 
-      role, 
-      firstName, 
-      lastName, 
-      isVerified: true 
+    const user = await UserModel.create({
+      email,
+      password: hashedPassword,
+      role,
+      firstName,
+      lastName,
+      isVerified: true
     });
-    
+
     const userWithoutPassword = await UserModel.findById(user._id).select('-password');
     return userWithoutPassword;
   }
 
   static async updateUser(userId: string, updateData: any) {
     const { password: _password, ...updateFields } = updateData;
-    
+
     const updated = await UserModel.findByIdAndUpdate(
-      userId, 
-      updateFields, 
+      userId,
+      updateFields,
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -101,11 +101,11 @@ export class UserService {
     if (!target) {
       throw new Error('User not found');
     }
-    
+
     if (target.role === 'admin') {
       throw new Error('Cannot delete an admin account');
     }
-    
+
     await UserModel.findByIdAndDelete(userId);
     return null;
   }
