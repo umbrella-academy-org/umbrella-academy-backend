@@ -31,6 +31,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 // Health check
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ success: true, message: 'Dreamize API is running' });

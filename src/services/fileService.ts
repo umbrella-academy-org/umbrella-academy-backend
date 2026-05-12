@@ -9,7 +9,7 @@ export class FileService {
 
   static generateAvatarUrl(originalName: string): string {
     const uniqueName = this.generateUniqueFilename(originalName);
-    return '/uploads/avatars/' + uniqueName;
+    return `/api/files/${uniqueName}`;
   }
 
   static generateUniqueFilename(originalName: string): string {
@@ -30,7 +30,7 @@ export class FileService {
     await this.ensureUploadDir();
     const filePath = path.join('uploads/avatars', filename);
     await fs.writeFile(filePath, file.buffer);
-    return `/uploads/avatars/${filename}`;
+    return `/api/files/${filename}`;
   }
 
   static validateFile(file: Express.Multer.File): { isValid: boolean; message?: string } {
