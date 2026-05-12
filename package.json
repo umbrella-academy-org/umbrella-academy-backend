@@ -40,7 +40,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/socket.io": "^3.0.2",
     "@types/supertest": "^7.2.0",
-    "@types/xlsx": "^0.0.36",
+    "@types/xlsx": "^0.0.35",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2",

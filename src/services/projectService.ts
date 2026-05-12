@@ -17,7 +17,7 @@ export class ProjectService {
         throw new Error('Roadmap not found');
       }
 
-      if (roadmap.studentId !== studentId) {
+      if (roadmap.student !== studentId) {
         throw new Error('Access denied: This roadmap does not belong to the student');
       }
 

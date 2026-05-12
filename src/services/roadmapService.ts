@@ -61,8 +61,6 @@ export class RoadmapService {
 
   static async findRoadmapById(id: string) {
     return await RoadmapModel.findById(id)
-      .populate('student')
-      .populate('trainer');
   }
 
   static async updateRoadmap(id: string, updateData: any) {
