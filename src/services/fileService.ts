@@ -1,10 +1,36 @@
+import { promises as fs } from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
 export class FileService {
   static generateFileUrl(originalName: string): string {
     return '/uploads/' + originalName;
   }
 
   static generateAvatarUrl(originalName: string): string {
-    return '/uploads/avatars/' + originalName;
+    const uniqueName = this.generateUniqueFilename(originalName);
+    return '/uploads/avatars/' + uniqueName;
+  }
+
+  static generateUniqueFilename(originalName: string): string {
+    const extension = path.extname(originalName);
+    const uniqueId = uuidv4();
+    return `${uniqueId}${extension}`;
+  }
+
+  static async ensureUploadDir(): Promise<void> {
+    try {
+      await fs.mkdir('uploads/avatars', { recursive: true });
+    } catch (error) {
+      // Directory already exists, ignore
+    }
+  }
+
+  static async saveFile(file: Express.Multer.File, filename: string): Promise<string> {
+    await this.ensureUploadDir();
+    const filePath = path.join('uploads/avatars', filename);
+    await fs.writeFile(filePath, file.buffer);
+    return `/uploads/avatars/${filename}`;
   }
 
   static validateFile(file: Express.Multer.File): { isValid: boolean; message?: string } {

@@ -3,3 +3,4 @@ dist
 .kiro
 config.bat
 .env
+uploads

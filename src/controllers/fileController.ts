@@ -41,12 +41,14 @@ export class FileController {
         return res.status(400).json({ success: false, message: validation.message });
       }
 
-      const url = FileService.generateAvatarUrl(req.file.originalname);
+      // Generate unique filename and save file to disk
+      const uniqueFilename = FileService.generateUniqueFilename(req.file.originalname);
+      const savedUrl = await FileService.saveFile(req.file, uniqueFilename);
       const metadata = FileService.getFileMetadata(req.file);
 
       return res.status(200).json({ 
         success: true, 
-        url,
+        url: savedUrl,
         metadata
       });
     } catch (err) {
