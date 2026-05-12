@@ -3,11 +3,17 @@ import { StudentModel, TrainerModel, UserModel } from '../models/User';
 
 export class UserService {
   static async updateProfile(userId: string, profileData: any) {
-    const { fieldId, trainerId, educationLevel, availability, learningPreferences } = profileData;
+    // Filter out undefined/null values to avoid overwriting with null
+    const updateFields = Object.keys(profileData).reduce((acc: any, key) => {
+      if (profileData[key] !== undefined && profileData[key] !== null) {
+        acc[key] = profileData[key];
+      }
+      return acc;
+    }, {});
 
     const updated = await UserModel.findByIdAndUpdate(
       userId,
-      { fieldId, trainerId, educationLevel, availability, learningPreferences },
+      updateFields,
       { new: true, runValidators: true }
     ).select('-password');
 

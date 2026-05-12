@@ -45,6 +45,7 @@ export interface BaseUser extends Document {
   otpExpiry: Date;
   resetToken: string;
   resetTokenExpiry: Date;
+  profilePicture?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -118,6 +119,7 @@ const userSchema = new Schema<BaseUser>({
   otpExpiry: { type: Date },
   resetToken: { type: String },
   resetTokenExpiry: { type: Date },
+  profilePicture: { type: String, default: null },
 }, { timestamps: true, discriminatorKey: 'role' });
 
 

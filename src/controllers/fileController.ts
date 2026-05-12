@@ -28,6 +28,32 @@ export class FileController {
     }
   }
 
+  // POST /api/files/avatar - upload avatar
+  static async uploadAvatar(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No file provided' });
+      }
+
+      // Validate avatar file (images only)
+      const validation = FileService.validateAvatar(req.file);
+      if (!validation.isValid) {
+        return res.status(400).json({ success: false, message: validation.message });
+      }
+
+      const url = FileService.generateAvatarUrl(req.file.originalname);
+      const metadata = FileService.getFileMetadata(req.file);
+
+      return res.status(200).json({ 
+        success: true, 
+        url,
+        metadata
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   // GET /api/files/:filename - serve file (if needed)
   static async serveFile(req: Request, res: Response, next: NextFunction) {
     try {
