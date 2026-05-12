@@ -4,6 +4,9 @@ import { TrainerController } from '../controllers/trainerController';
 
 const router = Router();
 
+// GET /trainers/me - get current logged in trainer
+router.get('/me', authenticate, requireRole('trainer'), TrainerController.getSessionTrainer);
+
 // GET /trainers/pending - list pending trainers (Requirements 10.6)
 router.get('/pending', authenticate, requireRole('admin'), TrainerController.getPendingTrainers);
 

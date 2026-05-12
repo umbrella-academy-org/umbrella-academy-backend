@@ -64,7 +64,8 @@ export class ProjectService {
       // Trainers can view projects of their assigned students
       if (userRole === 'trainer') {
         const student = await StudentModel.findById(project.studentId);
-        if (student?.assignedTrainerId !== userId) {
+
+        if (student?.assignedTrainerId != userId) {
           throw new Error('Access denied: You are not assigned to this student');
         }
       }
@@ -141,7 +142,7 @@ export class ProjectService {
     return updatedProject;
   }
 
-  static async approveProject(projectId: string, trainerId: string, feedback?: string) {
+  static async approveProject(projectId: string, trainerId: string, feedback: string) {
     const project = await ProjectModel.findById(projectId);
     if (!project) {
       throw new Error('Project not found');

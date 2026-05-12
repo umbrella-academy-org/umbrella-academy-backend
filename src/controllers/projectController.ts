@@ -135,7 +135,7 @@ export class ProjectController {
     try {
       const { userId } = req.user!;
       const projectId = req.params.id as string;
-      const { feedback } = req.body as { feedback?: string };
+      const { feedback } = req.body as { feedback: string };
 
       const project = await ProjectService.approveProject(projectId, userId, feedback);
       res.json({ 

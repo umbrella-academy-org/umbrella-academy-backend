@@ -52,7 +52,7 @@ export class UserController {
     try {
       const { status } = req.body as { status: 'active' | 'inactive' | 'suspended' };
       const userId = req.params.id as string;
-      
+
       const updated = await UserService.updateUserStatus(userId, status);
       res.json({ success: true, data: updated });
     } catch (err) {
@@ -121,11 +121,27 @@ export class UserController {
     try {
       const userId = req.params.id as string;
       const user = await UserService.findUserById(userId);
-      
+
       if (!user) {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
-      
+
+      res.json({ success: true, data: user });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // GET /users/me - get current logged in user
+  static async getSessionUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const user = await UserService.findUserById(userId);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
       res.json({ success: true, data: user });
     } catch (err) {
       next(err);

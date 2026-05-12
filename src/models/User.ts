@@ -38,7 +38,6 @@ export interface BaseUser extends Document {
   phoneNumber: string;
   role: UserRole;
   isActive: boolean;
-  status: string;
   gender: string;
   dateOfBirth: Date;
   isVerified: boolean;
@@ -46,6 +45,7 @@ export interface BaseUser extends Document {
   otpExpiry: Date;
   resetToken: string;
   resetTokenExpiry: Date;
+  profilePicture?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -76,7 +76,7 @@ export interface Trainer extends BaseUser {
   experience: Experience;
   skills: string[];
   approvalStatus: 'pending' | 'approved' | 'rejected';
-  approvedBy?: string; // Admin ID who approved/rejected
+  approvedBy?: string;
   approvedAt?: Date;
   rejectionReason?: string;
   id: string; // Virtual field for _id conversion
@@ -102,7 +102,6 @@ const userSchema = new Schema<BaseUser>({
   phoneNumber: { type: String },
   role: { type: String, enum: Object.values(UserRole), required: true },
   isActive: { type: Boolean, default: true },
-  status: { type: String, default: 'active' },
   gender: { type: String },
   dateOfBirth: { type: Date },
   isVerified: { type: Boolean, default: false },
@@ -110,6 +109,7 @@ const userSchema = new Schema<BaseUser>({
   otpExpiry: { type: Date },
   resetToken: { type: String },
   resetTokenExpiry: { type: Date },
+  profilePicture: { type: String, default: null },
 }, { timestamps: true, discriminatorKey: 'role' });
 
 

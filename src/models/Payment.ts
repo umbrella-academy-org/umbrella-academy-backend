@@ -18,47 +18,6 @@ export enum SubscriptionColor {
   GRAY = 'gray'      // expired
 }
 
-export interface Subscription {
-  id: string;
-  studentId: string;
-  startDate: Date;
-  expiryDate: Date;
-  isActive: boolean;
-  autoRenew: boolean;
-  daysRemaining: number; // Calculated field
-  colorCode: SubscriptionColor;
-  lastReminderSent: {
-    sevenDay: boolean;
-    twoDay: boolean;
-    expired: boolean;
-  };
-}
-
-export interface PromoCode {
-  code: string;
-  assignedStudentEmail: string; 
-  assignedStudentId: string;
-  discountAmount: number;      
-  discountPercentage: number;  
-  isUsed: boolean;
-  usedAt: Date | null;
-  reason: string;              // Admin must record reason
-  createdByAdminId: string;
-  expiresAt: Date;
-}
-
-export interface Payment extends Document {
-  id: string;
-  studentId: string;
-  type: PaymentType;
-  amount: number; // 20,000 or 100,000 RWF
-  promoCodeApplied?: string;
-  finalAmount: number;
-  transactionRef: string;
-  status: 'pending' | 'success' | 'failed';
-  paidAt: Date;
-}
-
 export interface Subscription extends Document {
   id: string;
   studentId: string;
@@ -86,6 +45,19 @@ export interface PromoCode extends Document {
   reason: string;              // Admin must record reason
   createdByAdminId: string;
   expiresAt: Date;
+}
+
+export interface Payment extends Document {
+  id: string;
+  studentId: string;
+  type: PaymentType;
+  amount: number; // 20,000 or 100,000 RWF
+  promoCodeApplied?: string;
+  discountAmount: number; // Amount discounted
+  finalAmount: number;
+  transactionRef: string;
+  status: 'pending' | 'success' | 'failed';
+  paidAt: Date;
 }
 
 // Schemas
@@ -134,6 +106,7 @@ const PaymentSchema = new Schema<Payment>({
   },
   amount: { type: Number, required: true },
   promoCodeApplied: { type: String, default: undefined },
+  discountAmount: { type: Number, default: 0 },
   finalAmount: { type: Number, required: true },
   transactionRef: { type: String, required: true },
   status: { 

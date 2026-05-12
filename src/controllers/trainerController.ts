@@ -27,11 +27,11 @@ export class TrainerController {
     try {
       const trainerId = req.params.id as string;
       const trainer = await TrainerService.getTrainerById(trainerId);
-      
+
       if (!trainer) {
         return res.status(404).json({ success: false, message: 'Trainer not found' });
       }
-      
+
       res.json({ success: true, data: trainer });
     } catch (err) {
       next(err);
@@ -43,6 +43,22 @@ export class TrainerController {
     try {
       const trainers = await TrainerService.getApprovedTrainers();
       res.json({ success: true, data: trainers });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // GET /trainers/me - get current logged in trainer
+  static async getSessionTrainer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const trainerId = req.user!.userId;
+      const trainer = await TrainerService.getTrainerById(trainerId);
+
+      if (!trainer) {
+        return res.status(404).json({ success: false, message: 'Trainer not found' });
+      }
+
+      res.json({ success: true, data: trainer });
     } catch (err) {
       next(err);
     }

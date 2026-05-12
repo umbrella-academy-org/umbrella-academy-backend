@@ -17,15 +17,22 @@ import systemRoutes from './routes/system';
 import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payments';
 import bookingRoutes from './routes/bookings';
+import projectRoutes from './routes/projects'; // Importing projects route
+import promoCodeRoutes from './routes/promoCodes';
+import promoCodePublicRoutes from './routes/promoCodesPublic';
+import guardianRoutes from './routes/guardian';
 
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin:[ process.env.FRONTEND_URL || 'https://dreamize-academy.vercel.app', 'http://localhost:3000' ],
   credentials: true,
 }));
 app.use(express.json());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {
@@ -44,9 +51,14 @@ app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/projects', projectRoutes); // Importing projects route
+app.use('/api/admin/promo-codes', promoCodeRoutes);
+app.use('/api/promo-codes', promoCodePublicRoutes);
+app.use('/api/guardian', guardianRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.log(err)
   const status = err.status || err.statusCode || 500;
   res.status(status).json({
     success: false,

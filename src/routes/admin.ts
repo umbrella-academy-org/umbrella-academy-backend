@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { AdminController } from '../controllers/adminController';
+import { PaymentController } from '../controllers/paymentController';
 
 const router = Router();
 
@@ -22,5 +23,13 @@ router.post('/trainers/:trainerId/reject', authenticate, requireRole('admin'), A
 
 // DELETE /api/admin/trainers/:trainerId - delete trainer account
 router.delete('/trainers/:trainerId', authenticate, requireRole('admin'), AdminController.deleteTrainer);
+
+// Admin payment management endpoints
+// GET /payments/admin/payments - get all payments (admin only)
+router.get('/payments', authenticate, requireRole('admin'), PaymentController.getAllPayments);
+
+// GET /payments/admin/subscriptions - get all subscriptions (admin only)
+router.get('/subscriptions', authenticate, requireRole('admin'), PaymentController.getAllSubscriptions);
+ 
 
 export default router;

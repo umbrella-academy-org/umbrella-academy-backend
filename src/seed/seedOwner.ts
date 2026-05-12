@@ -12,7 +12,7 @@ async function seedAdmin() {
   try {
     const existing = await User.findOne({ email: ADMIN_EMAIL, role: 'admin' });
     if (existing) {
-      console.log('✅ Dreamize admin already exists');
+      console.log('Dreamize admin already exists');
       return;
     }
     const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
@@ -24,6 +24,7 @@ async function seedAdmin() {
       role: 'admin',
       status: 'active',
       isVerified: true,
+      isActive: true,
     });
     await admin.save();
     console.log('Created Dreamize admin user');

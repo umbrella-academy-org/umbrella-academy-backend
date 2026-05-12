@@ -42,17 +42,26 @@ export class PaymentService {
     const transactionRef = this.generateTransactionRef();
     const paymentId = this.generatePaymentId();
 
+    const discountAmount = promoCodeApplied ? this.ORIENTATION_FEE - finalAmount : 0;
+
     const payment = await PaymentModel.create({
       id: paymentId,
       studentId,
       type: PaymentType.ORIENTATION,
       amount: this.ORIENTATION_FEE,
       promoCodeApplied,
+      discountAmount,
       finalAmount,
       transactionRef,
       status: 'success',
       paidAt: new Date()
     });
+
+    // Mark promo code as used if applied
+    if (promoCodeApplied) {
+      await this.markPromoCodeAsUsed(promoCodeApplied, studentId);
+    }
+
     await user.updateOne({ $set: { hasPaidOrientation: true } });
 
 
@@ -60,7 +69,7 @@ export class PaymentService {
       payment,
       amount: finalAmount,
       originalAmount: this.ORIENTATION_FEE,
-      discountApplied: promoCodeApplied ? this.ORIENTATION_FEE - finalAmount : 0
+      discountApplied: discountAmount
     };
   }
 
@@ -99,17 +108,28 @@ export class PaymentService {
     const transactionRef = this.generateTransactionRef();
     const paymentId = this.generatePaymentId();
 
+    const discountAmount = promoCodeApplied ? this.SUBSCRIPTION_FEE - finalAmount : 0;
+
     const payment = await PaymentModel.create({
       id: paymentId,
       studentId,
       type: PaymentType.SUBSCRIPTION,
       amount: this.SUBSCRIPTION_FEE,
       promoCodeApplied,
+      discountAmount,
       finalAmount,
       transactionRef,
       status: 'success',
       paidAt: new Date()
     });
+
+    // Mark promo code as used if applied
+    if (promoCodeApplied) {
+      await this.markPromoCodeAsUsed(promoCodeApplied, studentId);
+    }
+
+    // Create subscription record
+    await this.createOrUpdateSubscription(studentId);
 
     await user.updateOne({ $set: { hasActiveSubscription: true } });
 
@@ -117,7 +137,7 @@ export class PaymentService {
       payment,
       amount: finalAmount,
       originalAmount: this.SUBSCRIPTION_FEE,
-      discountApplied: promoCodeApplied ? this.SUBSCRIPTION_FEE - finalAmount : 0
+      discountApplied: discountAmount
     };
   }
 
@@ -144,11 +164,16 @@ export class PaymentService {
   }
 
   static async getPaymentStatus(studentId: string, paymentType?: PaymentType) {
-    const filter: any = { studentId };
-    if (paymentType) {
-      filter.type = paymentType;
-    }
 
+    const filter: any = {};
+    if (studentId) filter.studentId = studentId;
+    if (paymentType) filter.type = paymentType;
+
+    const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
+    return payments;
+  }
+
+  static async getPaymentStatusWithFilter(filter: any) {
     const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
     return payments;
   }
@@ -185,6 +210,22 @@ export class PaymentService {
     }
 
     return promo;
+  }
+
+  private static async markPromoCodeAsUsed(code: string, studentId: string): Promise<void> {
+    const promo = await PromoCodeModel.findOne({
+      code: code.toUpperCase(),
+      assignedStudentId: studentId,
+      isUsed: false
+    });
+
+    if (!promo) {
+      return; // Silently return if promo code not found or already used
+    }
+
+    promo.isUsed = true;
+    promo.usedAt = new Date();
+    await promo.save();
   }
 
   private static async createOrUpdateSubscription(studentId: string) {

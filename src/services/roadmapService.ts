@@ -1,3 +1,4 @@
+import { response } from 'express';
 import { RoadmapModel } from '../models/Roadmap';
 import { StudentModel } from '../models/User';
 
@@ -13,8 +14,8 @@ export class RoadmapService {
     // admin: no filter - return all
 
     return await RoadmapModel.find(filter)
-      .populate('student','firstName lastName email')
-      .populate('trainer','firstName lastName email');
+    .populate('studentId', 'firstName lastName email')
+    .populate('trainerId', 'firstName lastName email');
   }
 
   static async createRoadmap(roadmapData: any, trainerId: string) {
@@ -50,7 +51,7 @@ export class RoadmapService {
       student: roadmapData.studentId,
       trainer:trainerId,
       title: roadmapData.title,
-      status: roadmapData.status || 'draft', // Default to draft
+      status: roadmapData.status ,
       milestones: processedMilestones,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -103,8 +104,9 @@ export class RoadmapService {
     );
 
     // Update student onboarding status
-    await StudentModel.findByIdAndUpdate(roadmap.student, {
-      'onboardingStatus.roadmapReceived': true
+    await StudentModel.findByIdAndUpdate(roadmap.studentId, {
+      'onboardingStatus.roadmapReceived': true,
+      'onboardingStatus.learningStarted': true
     });
 
     return updatedRoadmap;
@@ -199,20 +201,24 @@ export class RoadmapService {
       throw new Error('Milestone not found in this roadmap');
     }
 
+  
+
     if (milestone.status !== 'active' && milestone.status !== 'locked') {
       throw new Error('Milestone must be active or locked to be completed');
     }
 
-    // Create a project automatically from the submission data
+    // Create a project from the submission data (use student's input or fallback to defaults)
     const { ProjectService } = await import('./projectService');
     const project = await ProjectService.createProject({
-      ...projectData,
       roadmapId,
       milestoneId,
-      title: `${milestone.title} - Project Submission`,
-      description: `Project submission for milestone: ${milestone.title}`,
-      category: 'Milestone Project',
-      studentRole: 'Student'
+      title: projectData.title || `${milestone.title} - Project Submission`,
+      description: projectData.description || `Project submission for milestone: ${milestone.title}`,
+      category: projectData.category || 'Milestone Project',
+      studentRole: projectData.studentRole || 'Student',
+      toolsUsed: projectData.toolsUsed || [],
+      evidence: projectData.evidence || {},
+      attachments: projectData.attachments || { images: [], pdfs: [] }
     }, studentId);
 
     // Submit the project for approval
@@ -236,7 +242,7 @@ export class RoadmapService {
     return { roadmap: updatedRoadmap, project };
   }
 
-  static async approveMilestone(roadmapId: string, milestoneId: number, trainerId: string, feedback?: string) {
+  static async approveMilestone(roadmapId: string, milestoneId: number, trainerId: string, feedback: string) {
     const roadmap = await RoadmapModel.findById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
@@ -246,6 +252,10 @@ export class RoadmapService {
     const milestone = roadmap.milestones.find(m => m.order == milestoneId);
     if (!milestone) {
       throw new Error('Milestone not found in this roadmap');
+    }
+
+      if (milestone.status === 'completed') {
+      return roadmap
     }
 
     if (milestone.status !== 'pending-approval') {
@@ -304,7 +314,7 @@ export class RoadmapService {
 
     // Update the next milestone to active
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
-      { 
+      {
         _id: roadmapId,
         'milestones.order': nextMilestone.order
       },

@@ -71,9 +71,9 @@ const MilestoneSchema = new Schema<Milestone>({
 });
 
 const RoadmapSchema = new Schema<Roadmap>({
-
-  student: { type: String, ref: 'User', required: true },
-  trainer: { type: String, ref: 'User', required: true },
+  
+  studentId: { type: String, required: true,ref: 'User' },
+  trainerId: { type: String, required: true,ref: 'User' },
   title: { type: String, required: true },
   status: {
     type: String,

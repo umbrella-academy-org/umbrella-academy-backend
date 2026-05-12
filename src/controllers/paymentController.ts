@@ -197,11 +197,12 @@ export class PaymentController {
       if (type) filter.type = type;
       if (status) filter.status = status;
 
-      const payments = await PaymentService.getPaymentStatus('', type);
+      const payments = await PaymentService.getPaymentStatusWithFilter(filter);
 
       res.json({
         success: true,
-        data: payments
+        data: payments,
+        count: payments.length
       });
     } catch (err) {
       next(err);

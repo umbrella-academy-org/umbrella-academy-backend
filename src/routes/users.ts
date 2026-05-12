@@ -3,9 +3,11 @@ import { authenticate, requireRole } from '../middleware/auth';
 import { UserController } from '../controllers/userController';
 
 const router = Router();
+// GET /users/me - get current logged in user
+router.get('/me', authenticate, UserController.getSessionUser);
 
-// PUT /users/profile - student onboarding
-router.put('/profile', authenticate, requireRole('student'), UserController.updateProfile);
+// PUT /users/profile - update user profile (all authenticated users)
+router.put('/profile', authenticate, UserController.updateProfile);
 
 // GET /users - admin scoped
 router.get('/', authenticate, requireRole('admin'), UserController.getUsers);
