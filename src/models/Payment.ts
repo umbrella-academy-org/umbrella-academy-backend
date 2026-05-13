@@ -20,7 +20,7 @@ export enum SubscriptionColor {
 
 export interface Subscription extends Document {
   id: string;
-  studentId: string;
+  student: string;
   startDate: Date;
   expiryDate: Date;
   isActive: boolean;
@@ -49,7 +49,7 @@ export interface PromoCode extends Document {
 
 export interface Payment extends Document {
   id: string;
-  studentId: string;
+  student: string;
   type: PaymentType;
   amount: number; // 20,000 or 100,000 RWF
   promoCodeApplied?: string;
@@ -69,7 +69,7 @@ const LastReminderSentSchema = new Schema({
 
 const SubscriptionSchema = new Schema<Subscription>({
   id: { type: String, required: true },
-  studentId: { type: String, required: true },
+  student: { type: String, required: true },
   startDate: { type: Date, required: true },
   expiryDate: { type: Date, required: true },
   isActive: { type: Boolean, required: true },
@@ -98,7 +98,7 @@ const PromoCodeSchema = new Schema<PromoCode>({
 
 const PaymentSchema = new Schema<Payment>({
   id: { type: String, required: true },
-  studentId: { type: String, required: true },
+  student: { type: String, required: true },
   type: { 
     type: String, 
     enum: Object.values(PaymentType), 

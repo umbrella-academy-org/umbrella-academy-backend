@@ -18,8 +18,8 @@ export interface ProjectEvidence {
 
 export interface Project extends Document {
   id: string;
-  studentId: string;
-  roadmapId?: string;           // Link to roadmap
+  student: string;
+  roadmap: string;           // Link to roadmap
   milestoneId?: number;        // Link to milestone (order number)
   title: string;
   description: string;
@@ -55,8 +55,8 @@ const AttachmentsSchema = new Schema({
 });
 
 const ProjectSchema = new Schema<Project>({
-  studentId: { type: String, required: true },
-  roadmapId: { type: String, default: undefined }, // Link to roadmap
+  student: { type: String, required: true, ref: 'User' },
+  roadmap: { type: String, default: undefined, ref: 'Roadmap' }, // Link to roadmap
   milestoneId: { type: Number, default: undefined }, // Link to milestone (order number)
   title: { type: String, required: true },
   description: { type: String, required: true },
@@ -74,7 +74,7 @@ const ProjectSchema = new Schema<Project>({
   trainerFeedback: { type: String, default: undefined },
   approvedByTrainerId: { type: String, default: undefined },
   approvedAt: { type: Date, default: undefined },
-  isPublic: { type: Boolean, default:true },
+  isPublic: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
 
