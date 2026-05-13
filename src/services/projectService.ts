@@ -38,13 +38,14 @@ export class ProjectService {
     return await project.save();
   }
 
-  static async getStudentProjects(studentId: string, status?: ProjectStatus) {
-    let filter: any = { studentId };
+  static async getStudentProjects(student: string, status?: ProjectStatus) {
+    let filter: any = { student };
     if (status) {
       filter.status = status;
     }
 
     const projects = await ProjectModel.find(filter)
+      .populate('student', 'name email')
       .sort({ createdAt: -1 });
 
     return projects;
@@ -113,7 +114,7 @@ export class ProjectService {
 
     const updatedProject = await ProjectModel.findByIdAndUpdate(
       projectId,
-      { 
+      {
         status: ProjectStatus.PENDING_APPROVAL,
         updatedAt: new Date()
       },
@@ -154,7 +155,7 @@ export class ProjectService {
 
     const updatedProject = await ProjectModel.findByIdAndUpdate(
       projectId,
-      { 
+      {
         status: ProjectStatus.APPROVED,
         approvedByTrainerId: trainerId,
         trainerFeedback: feedback || null,
@@ -183,9 +184,9 @@ export class ProjectService {
         // Import RoadmapService to avoid circular dependency
         const { RoadmapService } = await import('./roadmapService');
         await RoadmapService.approveMilestone(
-          project.roadmap, 
-          project.milestoneId, 
-          trainerId, 
+          project.roadmap,
+          project.milestoneId,
+          trainerId,
           feedback
         );
       } catch (error) {
@@ -209,7 +210,7 @@ export class ProjectService {
 
     const updatedProject = await ProjectModel.findByIdAndUpdate(
       projectId,
-      { 
+      {
         status: ProjectStatus.REJECTED,
         approvedByTrainerId: trainerId,
         trainerFeedback: feedback,
