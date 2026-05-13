@@ -14,13 +14,13 @@ export class RoadmapService {
     // admin: no filter - return all
 
     return await RoadmapModel.find(filter)
-    .populate('studentId', 'firstName lastName email')
-    .populate('trainerId', 'firstName lastName email');
+    .populate('student', 'firstName lastName email')
+    .populate('trainer', 'firstName lastName email');
   }
 
   static async createRoadmap(roadmapData: any, trainerId: string) {
     // Validate student exists
-    const student = await StudentModel.findById(roadmapData.studentId);
+    const student = await StudentModel.findById(roadmapData.student);
     if (!student) {
       throw new Error('Student not found');
     }

@@ -58,12 +58,12 @@ export class ProjectService {
 
     // Check access permissions
     if (userId && userRole) {
-      if (userRole === 'student' && project.studentId !== userId) {
+      if (userRole === 'student' && project.student !== userId) {
         throw new Error('Access denied: This project does not belong to you');
       }
       // Trainers can view projects of their assigned students
       if (userRole === 'trainer') {
-        const student = await StudentModel.findById(project.studentId);
+        const student = await StudentModel.findById(project.student);
 
         if (student?.assignedTrainerId != userId) {
           throw new Error('Access denied: You are not assigned to this student');
@@ -80,7 +80,7 @@ export class ProjectService {
       throw new Error('Project not found');
     }
 
-    if (project.studentId !== studentId) {
+    if (project.student !== studentId) {
       throw new Error('Access denied: This project does not belong to you');
     }
 
@@ -103,7 +103,7 @@ export class ProjectService {
       throw new Error('Project not found');
     }
 
-    if (project.studentId !== studentId) {
+    if (project.student !== studentId) {
       throw new Error('Access denied: This project does not belong to you');
     }
 
@@ -121,9 +121,9 @@ export class ProjectService {
     );
 
     // Add project to milestone's submitted projects if linked
-    if (project.roadmapId && project.milestoneId) {
+    if (project.roadmap && project.milestoneId) {
       try {
-        const roadmap = await RoadmapModel.findById(project.roadmapId);
+        const roadmap = await RoadmapModel.findById(project.roadmap);
         if (roadmap) {
           const milestone = roadmap.milestones.find(m => m.order == parseInt(project.milestoneId!.toString()));
           if (milestone) {
@@ -165,10 +165,10 @@ export class ProjectService {
     );
 
     // Add project to milestone's completed projects and complete the milestone if linked
-    if (project.roadmapId && project.milestoneId) {
+    if (project.roadmap && project.milestoneId) {
       try {
         // Add project to milestone's completed projects
-        const roadmap = await RoadmapModel.findById(project.roadmapId);
+        const roadmap = await RoadmapModel.findById(project.roadmap);
         if (roadmap) {
           const milestone = roadmap.milestones.find(m => m.order == parseInt(project.milestoneId!.toString()));
           if (milestone) {
@@ -183,7 +183,7 @@ export class ProjectService {
         // Import RoadmapService to avoid circular dependency
         const { RoadmapService } = await import('./roadmapService');
         await RoadmapService.approveMilestone(
-          project.roadmapId, 
+          project.roadmap, 
           project.milestoneId, 
           trainerId, 
           feedback
@@ -255,7 +255,7 @@ export class ProjectService {
       throw new Error('Project not found');
     }
 
-    if (project.studentId !== studentId) {
+    if (project.student !== studentId) {
       throw new Error('Access denied: This project does not belong to you');
     }
 

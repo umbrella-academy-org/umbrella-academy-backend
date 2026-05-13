@@ -46,7 +46,7 @@ export class PaymentService {
 
     const payment = await PaymentModel.create({
       id: paymentId,
-      studentId,
+      student:studentId,
       type: PaymentType.ORIENTATION,
       amount: this.ORIENTATION_FEE,
       promoCodeApplied,
@@ -112,7 +112,7 @@ export class PaymentService {
 
     const payment = await PaymentModel.create({
       id: paymentId,
-      studentId,
+      student:studentId,
       type: PaymentType.SUBSCRIPTION,
       amount: this.SUBSCRIPTION_FEE,
       promoCodeApplied,
@@ -157,7 +157,7 @@ export class PaymentService {
 
     // If it's a subscription payment, create/update subscription
     if (payment.type === PaymentType.SUBSCRIPTION) {
-      await this.createOrUpdateSubscription(payment.studentId);
+      await this.createOrUpdateSubscription(payment.student);
     }
 
     return payment;
@@ -253,7 +253,7 @@ export class PaymentService {
       const subscriptionId = this.generateSubscriptionId();
       await SubscriptionModel.create({
         id: subscriptionId,
-        studentId,
+        student:studentId,
         startDate,
         expiryDate,
         isActive: true,
