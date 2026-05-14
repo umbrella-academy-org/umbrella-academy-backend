@@ -50,7 +50,7 @@ export class AuthService {
         invitationToken
       );
 
-      
+
     } catch (error) {
       // Log error but don't fail registration if email fails
       console.warn('Failed to send guardian invitation and student otp email:', error);
@@ -218,6 +218,38 @@ export class AuthService {
       };
     }
 
+    if (user instanceof GuardianModel && !user.isVerified) {
+      const invitationToken = GuardianService.generateInvitationToken(
+        user._id.toString(),
+        user._id.toString()
+      );
+
+      const student = await StudentModel.findById(user.linkedStudentIds[0]);
+      if (!student) {
+        return {
+          success: false,
+          message: 'Linked student not found. Please contact support.'
+        };
+      }
+
+      await GuardianService.sendGuardianInvitation(
+        user.email,
+        user.firstName,
+        `${student.firstName} ${student.lastName}`,
+        invitationToken
+      );
+      return {
+        success: true,
+        message: 'Your email is not verified. We have resent the invitation email. Please check your inbox and verify your email to login.',
+        data: {
+          user,
+
+        }
+
+      };
+
+    }
+
     if (!user.isVerified) {
       return {
         success: false,
@@ -241,7 +273,7 @@ export class AuthService {
         success: true,
         message: 'Your application is pending approval.',
         data: {
-          user, 
+          user,
           token
         }
       };

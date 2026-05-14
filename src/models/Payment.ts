@@ -20,7 +20,7 @@ export enum SubscriptionColor {
 
 export interface Subscription extends Document {
   id: string;
-  studentId: string;
+  student: string;
   startDate: Date;
   expiryDate: Date;
   isActive: boolean;
@@ -36,10 +36,10 @@ export interface Subscription extends Document {
 
 export interface PromoCode extends Document {
   code: string;
-  assignedStudentEmail: string; 
+  assignedStudentEmail: string;
   assignedStudentId: string;
-  discountAmount: number;      
-  discountPercentage: number;  
+  discountAmount: number;
+  discountPercentage: number;
   isUsed: boolean;
   usedAt: Date | null;
   reason: string;              // Admin must record reason
@@ -49,7 +49,7 @@ export interface PromoCode extends Document {
 
 export interface Payment extends Document {
   id: string;
-  studentId: string;
+  student: string;
   type: PaymentType;
   amount: number; // 20,000 or 100,000 RWF
   promoCodeApplied?: string;
@@ -69,16 +69,16 @@ const LastReminderSentSchema = new Schema({
 
 const SubscriptionSchema = new Schema<Subscription>({
   id: { type: String, required: true },
-  studentId: { type: String, required: true },
+  student: { type: String, required: true, ref: 'User' },
   startDate: { type: Date, required: true },
   expiryDate: { type: Date, required: true },
   isActive: { type: Boolean, required: true },
   autoRenew: { type: Boolean, required: true },
   daysRemaining: { type: Number, required: true },
-  colorCode: { 
-    type: String, 
-    enum: Object.values(SubscriptionColor), 
-    required: true 
+  colorCode: {
+    type: String,
+    enum: Object.values(SubscriptionColor),
+    required: true
   },
   lastReminderSent: { type: LastReminderSentSchema, default: () => ({}) }
 });
@@ -98,21 +98,21 @@ const PromoCodeSchema = new Schema<PromoCode>({
 
 const PaymentSchema = new Schema<Payment>({
   id: { type: String, required: true },
-  studentId: { type: String, required: true },
-  type: { 
-    type: String, 
-    enum: Object.values(PaymentType), 
-    required: true 
+  student: { type: String, required: true, ref: 'User' },
+  type: {
+    type: String,
+    enum: Object.values(PaymentType),
+    required: true
   },
   amount: { type: Number, required: true },
   promoCodeApplied: { type: String, default: undefined },
   discountAmount: { type: Number, default: 0 },
   finalAmount: { type: Number, required: true },
   transactionRef: { type: String, required: true },
-  status: { 
-    type: String, 
-    enum: ['pending', 'success', 'failed'], 
-    required: true 
+  status: {
+    type: String,
+    enum: ['pending', 'success', 'failed'],
+    required: true
   },
   paidAt: { type: Date, required: true }
 });

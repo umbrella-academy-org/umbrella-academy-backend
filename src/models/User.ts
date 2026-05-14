@@ -25,6 +25,17 @@ export interface OnboardingChecklist {
   learningStarted: boolean;
 }
 
+export interface TrainerApplicationForm {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  cvUrl: string;
+  experience: Experience;
+  skills: string[];
+  introVideoUrl: string;
+}
+
 export interface Experience {
   yearsOfExperience: number;
   specializations: string[];

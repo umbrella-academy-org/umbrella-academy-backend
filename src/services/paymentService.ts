@@ -46,7 +46,7 @@ export class PaymentService {
 
     const payment = await PaymentModel.create({
       id: paymentId,
-      studentId,
+      student: studentId,
       type: PaymentType.ORIENTATION,
       amount: this.ORIENTATION_FEE,
       promoCodeApplied,
@@ -112,7 +112,7 @@ export class PaymentService {
 
     const payment = await PaymentModel.create({
       id: paymentId,
-      studentId,
+      student: studentId,
       type: PaymentType.SUBSCRIPTION,
       amount: this.SUBSCRIPTION_FEE,
       promoCodeApplied,
@@ -157,7 +157,7 @@ export class PaymentService {
 
     // If it's a subscription payment, create/update subscription
     if (payment.type === PaymentType.SUBSCRIPTION) {
-      await this.createOrUpdateSubscription(payment.studentId);
+      await this.createOrUpdateSubscription(payment.student);
     }
 
     return payment;
@@ -174,7 +174,10 @@ export class PaymentService {
   }
 
   static async getPaymentStatusWithFilter(filter: any) {
-    const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
+    const payments = await PaymentModel
+      .find(filter)
+      .populate('student', 'name email')
+      .sort({ createdAt: -1 });
     return payments;
   }
 
@@ -253,7 +256,7 @@ export class PaymentService {
       const subscriptionId = this.generateSubscriptionId();
       await SubscriptionModel.create({
         id: subscriptionId,
-        studentId,
+        student: studentId,
         startDate,
         expiryDate,
         isActive: true,
@@ -288,15 +291,9 @@ export class PaymentService {
     return `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   }
 
-  private static generatePaymentUrl(payment: Payment): string {
-    // In a real implementation, this would be the URL to your payment provider
-    // For now, we'll return a mock URL that would be handled by the frontend
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    return `${baseUrl}/payment/checkout?transactionRef=${payment.transactionRef}&amount=${payment.finalAmount}&type=${payment.type}`;
-  }
-
   static async getPaymentHistory(studentId: string) {
     const payments = await PaymentModel.find({ studentId })
+      .populate('student', 'name email')
       .sort({ createdAt: -1 })
       .select('-__v');
 

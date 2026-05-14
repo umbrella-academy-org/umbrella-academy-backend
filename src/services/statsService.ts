@@ -24,7 +24,7 @@ export class StatsService {
     const [assignedStudentsAgg] = await Promise.all([
       RoadmapModel.aggregate([
         { $match: { trainerId } },
-        { $group: { _id: '$studentId' } },
+        { $group: { _id: '$student' } },
         { $count: 'count' },
       ]),
     ]);
