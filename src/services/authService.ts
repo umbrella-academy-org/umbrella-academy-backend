@@ -122,7 +122,7 @@ export class AuthService {
     }
 
     const isValid = await bcrypt.compare(otp, user.otpCode);
-    console.log(isValid)
+    
     if (!isValid) {
       return { success: false, message: 'Invalid or expired OTP' };
     }
