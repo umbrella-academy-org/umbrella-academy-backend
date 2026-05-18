@@ -83,8 +83,9 @@ export class AuthController {
   // POST /api/auth/reset-password
   static async resetPassword(req: Request, res: Response, next: NextFunction) {
     try {
-      const { token, newPassword } = req.body;
-      const response = await AuthService.resetPassword(token, newPassword);
+      const userId = req.user!.userId;
+      const { newPassword } = req.body;
+      const response = await AuthService.resetPassword(userId, newPassword);
 
       if (!response.success) {
         return res.status(400).json(response);
