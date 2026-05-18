@@ -45,7 +45,7 @@ export class AdminService {
         to_email: trainer.email,
         to_name: trainer.firstName,
         subject: 'Your Trainer Application Has Been Approved',
-        message: `Congratulations! Your trainer application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/login`
+        message: `Congratulations! Your trainer application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/auth/login`
       });
     } catch (error) {
       // Ignore email errors but log if needed
