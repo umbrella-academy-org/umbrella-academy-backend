@@ -122,7 +122,7 @@ export class AuthService {
     }
 
     const isValid = await bcrypt.compare(otp, user.otpCode);
-    
+
     if (!isValid) {
       return { success: false, message: 'Invalid or expired OTP' };
     }
@@ -168,17 +168,18 @@ export class AuthService {
     const user = await UserModel.findOne({ email: email?.toLowerCase() });
 
     if (user) {
-      const resetToken = crypto.randomUUID();
-      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = await bcrypt.hash(otp, 10);
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-      await UserModel.findByIdAndUpdate(user._id, { resetToken, resetTokenExpiry }, { new: true });
+      await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
       try {
         await sendEmail({
           to_email: email,
           to_name: user.firstName || 'User',
           subject: 'Reset Your Dreamize Password',
-          message: `Your password reset code is: ${resetToken}\n\nThis code expires in 10 minutes.`
+          message: `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`
         });
       } catch {
         // ignore
@@ -188,10 +189,9 @@ export class AuthService {
     return { success: true };
   }
 
-  static async resetPassword(token: string, newPassword: string) {
+  static async resetPassword(userId: string, newPassword: string) {
     const user = await UserModel.findOne({
-      resetToken: token,
-      resetTokenExpiry: { $gt: new Date() },
+      _id: userId
     });
 
     if (!user) {
@@ -201,7 +201,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await UserModel.findByIdAndUpdate(
       user._id,
-      { password: hashedPassword, $unset: { resetToken: 1, resetTokenExpiry: 1 } },
+      { password: hashedPassword, $unset: { otpCode: 1, otpExpiry: 1 } },
       { new: true }
     );
 

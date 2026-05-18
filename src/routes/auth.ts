@@ -23,7 +23,7 @@ router.post('/resend-otp', AuthController.resendOtp);
 router.post('/forgot-password', AuthController.forgotPassword);
 
 // POST /api/auth/reset-password
-router.post('/reset-password', AuthController.resetPassword);
+router.post('/reset-password', authenticate, AuthController.resetPassword);
 
 // POST /api/auth/login
 router.post('/login', AuthController.login);
