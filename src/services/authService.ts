@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist } from '../models/User';
 import { sendEmail } from '../services/emailService';
 import { GuardianService } from './guardianService';
