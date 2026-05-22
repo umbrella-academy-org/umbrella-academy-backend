@@ -57,7 +57,6 @@ export class RoadmapController {
       if (!roadmap) {
         return res.status(404).json({ success: false, message: 'Roadmap not found' });
       }
-console.log(roadmap.trainer,userId)
       if (roadmap.trainer !== userId) {
         return res.status(403).json({ success: false, message: 'Access denied' });
       }
@@ -76,10 +75,10 @@ console.log(roadmap.trainer,userId)
       const roadmapId = req.params.id as string;
 
       const roadmap = await RoadmapService.submitForApproval(roadmapId, userId);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         data: roadmap,
-        message: 'Roadmap submitted for approval successfully' 
+        message: 'Roadmap submitted for approval successfully'
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -100,13 +99,11 @@ console.log(roadmap.trainer,userId)
       const { userId } = req.user!;
       const roadmapId = req.params.id as string;
 
-      console.log(req.params.id)
-
       const roadmap = await RoadmapService.approveRoadmap(roadmapId, userId);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         data: roadmap,
-        message: 'Roadmap approved successfully' 
+        message: 'Roadmap approved successfully'
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -129,17 +126,17 @@ console.log(roadmap.trainer,userId)
       const { rejectionReason } = req.body as { rejectionReason: string };
 
       if (!rejectionReason) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Rejection reason is required' 
+        return res.status(400).json({
+          success: false,
+          message: 'Rejection reason is required'
         });
       }
 
       const roadmap = await RoadmapService.rejectRoadmap(roadmapId, userId, rejectionReason);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         data: roadmap,
-        message: 'Roadmap rejected successfully' 
+        message: 'Roadmap rejected successfully'
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -161,10 +158,10 @@ console.log(roadmap.trainer,userId)
       const roadmapId = req.params.id as string;
 
       const roadmap = await RoadmapService.activateRoadmap(roadmapId, userId);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         data: roadmap,
-        message: 'Roadmap activated successfully' 
+        message: 'Roadmap activated successfully'
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -187,10 +184,10 @@ console.log(roadmap.trainer,userId)
       const projectData = req.body; // Project evidence data
 
       const result = await RoadmapService.completeMilestone(roadmapId, parseInt(milestoneId), userId, projectData);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         data: result,
-        message: 'Milestone submitted for approval successfully. Project created and submitted.' 
+        message: 'Milestone submitted for approval successfully. Project created and submitted.'
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -219,10 +216,10 @@ console.log(roadmap.trainer,userId)
       const { feedback } = req.body as { feedback: string };
 
       const roadmap = await RoadmapService.approveMilestone(roadmapId, parseInt(milestoneId), userId, feedback);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         data: roadmap,
-        message: 'Milestone approved successfully' 
+        message: 'Milestone approved successfully'
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -247,10 +244,10 @@ console.log(roadmap.trainer,userId)
       const roadmapId = req.params.roadmapId as string;
 
       const roadmap = await RoadmapService.activateNextMilestone(roadmapId, userId);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         data: roadmap,
-        message: 'Next milestone activated successfully' 
+        message: 'Next milestone activated successfully'
       });
     } catch (err) {
       if (err instanceof Error) {

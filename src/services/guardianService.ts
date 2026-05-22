@@ -28,11 +28,11 @@ export class GuardianService {
     try {
       const secret = process.env.JWT_SECRET as string;
       const decoded = jwt.verify(token, secret) as InvitationTokenPayload;
-  
+
       if (decoded.type != 'guardian_invitation') {
         return null;
       }
-      
+
       return decoded;
     } catch {
       return null;
@@ -47,7 +47,7 @@ export class GuardianService {
     invitationToken: string
   ): Promise<void> {
     const setPasswordUrl = `${process.env.FRONTEND_URL}/auth/guardian/set-password?token=${invitationToken}`;
-    
+
     await sendEmail({
       to_email: guardianEmail,
       to_name: guardianName,
@@ -77,14 +77,13 @@ The DREAMIZE-AFRICA Team`
     message?: string;
   }> {
     const payload = this.verifyInvitationToken(token);
-    console.log(payload);
-    
-    if (payload===null) {
+
+    if (payload === null) {
       return { valid: false, message: 'Invalid or expired invitation token' };
     }
 
     const guardian = await GuardianModel.findById(payload.guardianId);
-    
+
     if (!guardian) {
       return { valid: false, message: 'Guardian account not found' };
     }
@@ -101,16 +100,16 @@ The DREAMIZE-AFRICA Team`
     const student = await StudentModel.findById(payload.studentId);
     const studentName = student ? `${student.firstName} ${student.lastName}` : 'Your student';
 
-    return { 
-      valid: true, 
-      guardian, 
-      studentName 
+    return {
+      valid: true,
+      guardian,
+      studentName
     };
   }
 
   // Set guardian password (accept invitation)
   static async setGuardianPassword(
-    token: string, 
+    token: string,
     password: string
   ): Promise<{
     success: boolean;
@@ -123,13 +122,13 @@ The DREAMIZE-AFRICA Team`
     }
 
     const payload = this.verifyInvitationToken(token);
-    
+
     if (!payload) {
       return { success: false, message: 'Invalid or expired invitation token' };
     }
 
     const guardian = await GuardianModel.findById(payload.guardianId);
-    
+
     if (!guardian) {
       return { success: false, message: 'Guardian account not found' };
     }
@@ -140,12 +139,12 @@ The DREAMIZE-AFRICA Team`
 
     // Hash password and update guardian
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     guardian.password = hashedPassword;
     guardian.inviteState = GuardianInviteState.ACTIVE;
     guardian.passwordSetAt = new Date();
     guardian.isVerified = true;
-    
+
     await guardian.save();
 
     // Generate login token
@@ -193,7 +192,7 @@ The DREAMIZE-AFRICA Team`
     }
 
     const passwordMatch = await bcrypt.compare(password, guardian.password);
-    
+
     if (!passwordMatch) {
       return {
         success: false,
@@ -271,7 +270,7 @@ The DREAMIZE-AFRICA Team`
     message: string;
   }> {
     const guardian = await GuardianModel.findById(guardianId);
-    
+
     if (!guardian) {
       return { success: false, message: 'Guardian not found' };
     }
@@ -281,14 +280,14 @@ The DREAMIZE-AFRICA Team`
     }
 
     const student = await StudentModel.findById(studentId);
-    
+
     if (!student) {
       return { success: false, message: 'Student not found' };
     }
 
     // Generate new token and send
     const invitationToken = this.generateInvitationToken(guardianId, studentId);
-    
+
     await this.sendGuardianInvitation(
       guardian.email,
       guardian.firstName,
@@ -312,13 +311,13 @@ The DREAMIZE-AFRICA Team`
     message: string;
   }> {
     const payload = this.verifyInvitationToken(token);
-    
+
     if (!payload) {
       return { success: false, message: 'Invalid or expired invitation token' };
     }
 
     const guardian = await GuardianModel.findById(payload.guardianId);
-    
+
     if (!guardian) {
       return { success: false, message: 'Guardian account not found' };
     }

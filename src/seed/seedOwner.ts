@@ -11,10 +11,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 async function seedAdmin() {
   try {
     const existing = await User.findOne({ email: ADMIN_EMAIL, role: 'admin' });
-    if (existing) {
-      console.log('Dreamize admin already exists');
-      return;
-    }
+    if (existing) return;
+
     const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
     const admin = new User({
       firstName: 'Dreamize',

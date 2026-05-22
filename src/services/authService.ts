@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist } from '../models/User';
 import { sendEmail } from '../services/emailService';
 import { GuardianService } from './guardianService';
@@ -112,7 +111,6 @@ export class AuthService {
 
   static async verifyOtp(email: string, otp: string) {
     const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    console.log(email)
     if (!user || !user.otpCode || !user.otpExpiry) {
       return { success: false, message: 'Invalid or expired OTP' };
     }
@@ -146,8 +144,7 @@ export class AuthService {
       const hashedOtp = await bcrypt.hash(otp, 10);
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-      const w = await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
-      console.log(bcrypt.compareSync(otp, hashedOtp))
+      await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
       try {
         await sendEmail({
           to_email: email,
@@ -159,7 +156,6 @@ export class AuthService {
         console.error('Error sending OTP', error);
       }
     }
-    console.log("How how")
 
     return { success: true };
   }

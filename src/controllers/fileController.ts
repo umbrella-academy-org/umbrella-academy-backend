@@ -65,9 +65,6 @@ export class FileController {
 
       const filePath = path.join('uploads', 'avatars', filename.replace('avatars/', ''))
 
-
-      console.log(`Serving file: ${filePath}`);
-
       // Check if file exists
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ success: false, message: 'File not found' });
