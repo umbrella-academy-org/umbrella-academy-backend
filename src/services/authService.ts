@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist } from '../models/User';
-import { sendEmail } from '../services/emailService';
+import { queueEmail } from '../services/emailService';
 import { GuardianService } from './guardianService';
 import { ApiResponse } from '@/interfaces/api';
 import { StudentRegister } from '@/interfaces/auth';
@@ -33,26 +33,23 @@ export class AuthService {
     savedGuardian.linkedStudentIds.push(savedStudent.id);
     await savedGuardian.save();
 
-    // Send guardian invitation email
+    // Queue guardian invitation + student OTP without blocking registration response
     try {
       const invitationToken = GuardianService.generateInvitationToken(
         savedGuardian._id.toString(),
         savedStudent._id.toString()
       );
 
-      await this.sendOtp(savedStudent.email)
+      await AuthService.issueOtpForEmail(savedStudent.email);
 
-      await GuardianService.sendGuardianInvitation(
+      GuardianService.sendGuardianInvitation(
         savedGuardian.email,
         savedGuardian.firstName,
         `${savedStudent.firstName} ${savedStudent.lastName}`,
         invitationToken
       );
-
-
     } catch (error) {
-      // Log error but don't fail registration if email fails
-      console.warn('Failed to send guardian invitation and student otp email:', error);
+      console.warn('Failed to queue guardian invitation or student OTP email:', error);
     }
 
     const token = AuthService.signToken(String(savedStudent._id), savedStudent.role);
@@ -73,6 +70,7 @@ export class AuthService {
     trainer.password = hashedPassword;
 
     const savedTrainer = await TrainerModel.create(trainer);
+    await AuthService.issueOtpForEmail(savedTrainer.email);
     const token = AuthService.signToken(String(savedTrainer._id), savedTrainer.role);
 
     return {
@@ -85,27 +83,30 @@ export class AuthService {
     } as ApiResponse;
   }
 
-  static async sendOtp(email: string) {
+  private static async issueOtpForEmail(
+    email: string,
+    subject = 'Your Dreamize Verification Code',
+    messagePrefix = 'Your verification code is'
+  ): Promise<void> {
     const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    if (user) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedOtp = await bcrypt.hash(otp, 10);
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    if (!user) return;
 
-      await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-      try {
-        await sendEmail({
-          to_email: email,
-          to_name: user.firstName || 'User',
-          subject: 'Your Dreamize Verification Code',
-          message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
-        });
-      } catch (error) {
-        console.error('Error sending OTP', error);
-      }
-    }
+    await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
+    queueEmail({
+      to_email: email,
+      to_name: user.firstName || 'User',
+      subject,
+      message: `${messagePrefix}: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
+    });
+  }
+
+  static async sendOtp(email: string) {
+    await AuthService.issueOtpForEmail(email);
     return { success: true };
   }
 
@@ -138,25 +139,7 @@ export class AuthService {
 
 
   static async resendOtp(email: string) {
-    const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    if (user) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedOtp = await bcrypt.hash(otp, 10);
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-
-      await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
-      try {
-        await sendEmail({
-          to_email: email,
-          to_name: user.firstName || 'User',
-          subject: 'Your Dreamize Verification Code',
-          message: `Your verification code is: ${otp}\n\nThis code expiresn in 10 minutes. Do not share it with anyone.`
-        });
-      } catch (error) {
-        console.error('Error sending OTP', error);
-      }
-    }
-
+    await AuthService.issueOtpForEmail(email);
     return { success: true };
   }
 
@@ -170,16 +153,12 @@ export class AuthService {
 
       await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
-      try {
-        await sendEmail({
-          to_email: email,
-          to_name: user.firstName || 'User',
-          subject: 'Reset Your Dreamize Password',
-          message: `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`
-        });
-      } catch {
-        // ignore
-      }
+      queueEmail({
+        to_email: email,
+        to_name: user.firstName || 'User',
+        subject: 'Reset Your Dreamize Password',
+        message: `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`,
+      });
     }
 
     return { success: true };
@@ -228,7 +207,7 @@ export class AuthService {
         };
       }
 
-      await GuardianService.sendGuardianInvitation(
+      GuardianService.sendGuardianInvitation(
         user.email,
         user.firstName,
         `${student.firstName} ${student.lastName}`,

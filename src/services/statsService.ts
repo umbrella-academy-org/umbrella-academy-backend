@@ -1,4 +1,4 @@
-import { UserModel } from '../models/User';
+import { StudentModel, TrainerModel, UserModel } from '../models/User';
 import { PaymentModel } from '../models/Payment';
 import { RoadmapModel } from '../models/Roadmap';
 
@@ -60,8 +60,8 @@ export class StatsService {
 
   static async getPlatformAnalytics() {
     const [studentCount, trainerCount] = await Promise.all([
-      UserModel.countDocuments({ role: 'student' }),
-      UserModel.countDocuments({ role: 'trainer' }),
+      StudentModel.countDocuments({}),
+      TrainerModel.countDocuments({}),
     ]);
 
     const totalRevenueAgg = await PaymentModel.aggregate([

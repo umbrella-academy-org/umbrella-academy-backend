@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { GuardianModel, StudentModel, Guardian, GuardianInviteState } from '../models/User';
-import { sendEmail } from './emailService';
+import { queueEmail } from './emailService';
 
 const INVITATION_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
@@ -40,15 +40,15 @@ export class GuardianService {
   }
 
   // Send guardian invitation email
-  static async sendGuardianInvitation(
+  static sendGuardianInvitation(
     guardianEmail: string,
     guardianName: string,
     studentName: string,
     invitationToken: string
-  ): Promise<void> {
+  ): void {
     const setPasswordUrl = `${process.env.FRONTEND_URL}/auth/guardian/set-password?token=${invitationToken}`;
 
-    await sendEmail({
+    queueEmail({
       to_email: guardianEmail,
       to_name: guardianName,
       subject: "You've been invited as a Guardian on DREAMIZE-AFRICA",
@@ -288,7 +288,7 @@ The DREAMIZE-AFRICA Team`
     // Generate new token and send
     const invitationToken = this.generateInvitationToken(guardianId, studentId);
 
-    await this.sendGuardianInvitation(
+    this.sendGuardianInvitation(
       guardian.email,
       guardian.firstName,
       `${student.firstName} ${student.lastName}`,

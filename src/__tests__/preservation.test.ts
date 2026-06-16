@@ -54,10 +54,10 @@ jest.mock('../services/socket', () => ({
   initSocket: jest.fn(),
 }));
 
-// ─── Mock emailService to avoid real EmailJS calls ──────────────────────────
+// ─── Mock emailService to avoid real SMTP calls ─────────────────────────────
 jest.mock('../services/emailService', () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
-  EMAILJS_TEMPLATE_ID: 'template_unified',
+  queueEmail: jest.fn(),
 }));
 
 // ─── Mock all other routes to avoid their DB dependencies ────────────────────
