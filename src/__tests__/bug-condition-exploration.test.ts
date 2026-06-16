@@ -102,6 +102,7 @@ jest.mock('../routes/system', () => {
 jest.mock('../services/emailService', () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
   queueEmail: jest.fn(),
+  verifySmtpConnection: jest.fn().mockResolvedValue(true),
 }));
 
 import express from 'express';

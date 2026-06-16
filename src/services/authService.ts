@@ -88,8 +88,17 @@ export class AuthService {
     subject = 'Your Dreamize Verification Code',
     messagePrefix = 'Your verification code is'
   ): Promise<void> {
-    const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    if (!user) return;
+    const normalizedEmail = email?.toLowerCase().trim();
+    if (!normalizedEmail) {
+      console.warn('[auth] Cannot send OTP — email address is missing');
+      return;
+    }
+
+    const user = await UserModel.findOne({ email: normalizedEmail });
+    if (!user) {
+      console.warn(`[auth] Cannot send OTP — no user found for ${normalizedEmail}`);
+      return;
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = await bcrypt.hash(otp, 10);
@@ -97,8 +106,12 @@ export class AuthService {
 
     await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
+    if (process.env.EMAIL_DEBUG === 'true') {
+      console.info(`[auth][debug] OTP for ${normalizedEmail}: ${otp}`);
+    }
+
     queueEmail({
-      to_email: email,
+      to_email: normalizedEmail,
       to_name: user.firstName || 'User',
       subject,
       message: `${messagePrefix}: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
@@ -111,19 +124,36 @@ export class AuthService {
   }
 
   static async verifyOtp(email: string, otp: string) {
-    const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    if (!user || !user.otpCode || !user.otpExpiry) {
-      return { success: false, message: 'Invalid or expired OTP' };
+    const normalizedEmail = email?.toLowerCase().trim();
+    const user = await UserModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return { success: false, message: 'No account found for this email.' };
+    }
+
+    if (user.isVerified) {
+      return {
+        success: true,
+        message: 'Email already verified.',
+        data: {
+          user: user.toJSON(),
+          token: this.signToken(String(user._id), user.role),
+        },
+      };
+    }
+
+    if (!user.otpCode || !user.otpExpiry) {
+      return { success: false, message: 'Invalid or expired OTP. Please request a new code.' };
     }
 
     if (user.otpExpiry < new Date()) {
-      return { success: false, message: 'Invalid or expired OTP' };
+      return { success: false, message: 'Invalid or expired OTP. Please request a new code.' };
     }
 
     const isValid = await bcrypt.compare(otp, user.otpCode);
 
     if (!isValid) {
-      return { success: false, message: 'Invalid or expired OTP' };
+      return { success: false, message: 'Incorrect verification code. Please try again.' };
     }
 
     const savedUser = await UserModel.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 }, isVerified: true }, { new: true });

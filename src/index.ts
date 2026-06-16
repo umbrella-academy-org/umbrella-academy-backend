@@ -4,6 +4,7 @@ import cors from 'cors';
 import http from 'http';
 import connectDB from './config/db';
 import { initSocket } from './services/socket';
+import { verifySmtpConnection } from './services/emailService';
 import './seed/seedOwner';
 
 import authRoutes from './routes/auth';
@@ -73,6 +74,7 @@ initSocket(server);
 const startServer = async () => {
   try {
     await connectDB();
+    await verifySmtpConnection();
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
