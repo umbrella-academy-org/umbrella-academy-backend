@@ -61,4 +61,37 @@ export class CertificateController {
       next(err);
     }
   }
+
+  static async downloadCertificate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const role = req.user!.role;
+      const certificateId = req.params.id as string;
+
+      const certificate = await CertificateService.assertCanAccessCertificate(
+        certificateId,
+        userId,
+        role
+      );
+
+      const pdfBuffer = await CertificateService.generateCertificatePdfBuffer(certificate);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${certificate.certificateNumber}.pdf"`
+      );
+      res.send(pdfBuffer);
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Certificate not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Access denied') {
+          return res.status(403).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
 }

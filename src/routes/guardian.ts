@@ -21,6 +21,22 @@ router.post('/invite/decline', GuardianController.declineInvitation);
 // GET /api/guardian/students - Get all linked students
 router.get('/students', authenticate, requireRole('guardian'), GuardianController.getLinkedStudents);
 
+// GET /api/guardian/students/:studentId/certificates
+router.get(
+  '/students/:studentId/certificates',
+  authenticate,
+  requireRole('guardian'),
+  GuardianController.getStudentCertificates
+);
+
+// GET /api/guardian/students/:studentId/projects
+router.get(
+  '/students/:studentId/projects',
+  authenticate,
+  requireRole('guardian'),
+  GuardianController.getStudentProjects
+);
+
 // GET /api/guardian/students/:studentId - Get specific student details
 router.get('/students/:studentId', authenticate, requireRole('guardian'), GuardianController.getStudentDetails);
 

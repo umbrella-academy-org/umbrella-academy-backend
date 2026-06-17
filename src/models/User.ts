@@ -82,6 +82,9 @@ export interface Student extends BaseUser {
   onboardingStatus: OnboardingChecklist;
   assignedTrainerId: string | null;
   currentRoadmapId: string | null;
+  bio?: string;
+  publicProfileSlug?: string;
+  isPublicProfileEnabled?: boolean;
 }
 
 export interface Trainer extends BaseUser {
@@ -148,6 +151,9 @@ const studentSchema = new Schema<Student>({
   },
   assignedTrainerId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   currentRoadmapId: { type: Schema.Types.ObjectId, ref: 'Roadmap', default: null },
+  bio: { type: String, default: '' },
+  publicProfileSlug: { type: String, unique: true, sparse: true, index: true },
+  isPublicProfileEnabled: { type: Boolean, default: true },
 });
 
 // Trainer Discriminator

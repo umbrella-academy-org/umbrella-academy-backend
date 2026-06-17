@@ -1,7 +1,8 @@
 import { randomBytes } from 'crypto';
+import PDFDocument from 'pdfkit';
 import { CertificateModel, Certificate } from '../models/Certificate';
 import { RoadmapModel } from '../models/Roadmap';
-import { UserModel } from '../models/User';
+import { UserModel, GuardianModel } from '../models/User';
 
 function generateCertificateNumber(): string {
   const suffix = randomBytes(4).toString('hex').toUpperCase();
@@ -86,7 +87,7 @@ export class CertificateService {
       pdfUrl: '',
     });
 
-    certificate.pdfUrl = `/api/certificates/${certificate._id.toString()}/view`;
+    certificate.pdfUrl = `/api/certificates/${certificate._id.toString()}/download`;
     await certificate.save();
 
     try {
@@ -137,7 +138,63 @@ export class CertificateService {
     if (role === 'student' && studentId === userId) return certificate;
     if (role === 'trainer' && trainerId === userId) return certificate;
 
+    if (role === 'guardian') {
+      const guardian = await GuardianModel.findById(userId);
+      if (
+        guardian &&
+        guardian.linkedStudentIds.some((id) => String(id) === studentId)
+      ) {
+        return certificate;
+      }
+    }
+
     throw new Error('Access denied');
+  }
+
+  static generateCertificatePdfBuffer(certificate: Certificate): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 48 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const completedOn = certificate.completionDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      doc.rect(36, 36, doc.page.width - 72, doc.page.height - 72).lineWidth(3).stroke('#cda429');
+
+      doc.fillColor('#cda429').fontSize(10).text('DREAMIZE AFRICA', { align: 'center' });
+      doc.moveDown(1.5);
+      doc.fillColor('#111111').fontSize(28).text('Certificate of Completion', { align: 'center' });
+      doc.moveDown();
+      doc.fillColor('#666666').fontSize(12).text('This certifies that', { align: 'center' });
+      doc.moveDown();
+      doc.fillColor('#0f172a').fontSize(24).text(certificate.studentName, { align: 'center' });
+      doc.moveDown();
+      doc.fillColor('#666666').fontSize(12).text('has successfully completed the milestone', { align: 'center' });
+      doc.moveDown();
+      doc.fillColor('#334155').fontSize(18).text(certificate.milestoneName, { align: 'center' });
+      doc.moveDown(2);
+
+      const metaY = doc.y + 20;
+      doc.fillColor('#475569').fontSize(10);
+      doc.text(`Certificate No.\n${certificate.certificateNumber}`, 72, metaY);
+      doc.text(`Verified By\n${certificate.trainerName}`, doc.page.width / 2 - 80, metaY, {
+        width: 160,
+        align: 'center',
+      });
+      doc.text(`Completed On\n${completedOn}`, doc.page.width - 220, metaY, {
+        width: 160,
+        align: 'right',
+      });
+
+      doc.end();
+    });
   }
 
   static renderCertificateHtml(certificate: Certificate) {

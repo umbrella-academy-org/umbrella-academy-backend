@@ -5,6 +5,7 @@ import { CertificateController } from '../controllers/certificateController';
 const router = Router();
 
 router.get('/', authenticate, CertificateController.getMyCertificates);
+router.get('/:id/download', authenticate, CertificateController.downloadCertificate);
 router.get('/:id/view', authenticate, CertificateController.viewCertificate);
 router.get('/:id', authenticate, CertificateController.getCertificateById);
 

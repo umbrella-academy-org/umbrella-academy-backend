@@ -261,6 +261,34 @@ The DREAMIZE-AFRICA Team`
     };
   }
 
+  static async assertGuardianCanAccessStudent(guardianId: string, studentId: string) {
+    const guardian = await GuardianModel.findById(guardianId);
+    if (!guardian) {
+      throw new Error('Guardian not found');
+    }
+
+    if (!guardian.linkedStudentIds.some((id) => String(id) === studentId)) {
+      throw new Error('You do not have access to this student');
+    }
+
+    return guardian;
+  }
+
+  static async getStudentCertificates(guardianId: string, studentId: string) {
+    await this.assertGuardianCanAccessStudent(guardianId, studentId);
+    const { CertificateService } = await import('./certificateService');
+    const certificates = await CertificateService.getStudentCertificates(studentId);
+    return { success: true, certificates };
+  }
+
+  static async getStudentProjects(guardianId: string, studentId: string) {
+    await this.assertGuardianCanAccessStudent(guardianId, studentId);
+    const { ProjectService } = await import('./projectService');
+    const { ProjectStatus } = await import('../models/Project');
+    const projects = await ProjectService.getStudentProjects(studentId, ProjectStatus.APPROVED);
+    return { success: true, projects };
+  }
+
   // Resend invitation (in case original expired or was lost)
   static async resendInvitation(
     guardianId: string,
