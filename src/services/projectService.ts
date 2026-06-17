@@ -29,10 +29,17 @@ export class ProjectService {
     }
 
     const project = new ProjectModel({
-      ...projectData,
-      studentId,
+      title: projectData.title,
+      description: projectData.description,
+      category: projectData.category,
+      studentRole: projectData.studentRole,
+      toolsUsed: projectData.toolsUsed ?? [],
+      evidence: projectData.evidence ?? {},
+      attachments: projectData.attachments ?? { images: [], pdfs: [] },
+      student: studentId,
+      roadmap: projectData.roadmapId ?? projectData.roadmap ?? undefined,
+      milestoneId: projectData.milestoneId ?? undefined,
       status: ProjectStatus.DRAFT,
-      createdAt: new Date()
     });
 
     return await project.save();
@@ -227,7 +234,7 @@ export class ProjectService {
     const students = await StudentModel.find({ assignedTrainerId: trainerId });
     const studentIds = students.map(student => student._id.toString());
 
-    let filter: any = { studentId: { $in: studentIds } };
+    let filter: any = { student: { $in: studentIds } };
     if (status) {
       filter.status = status;
     }

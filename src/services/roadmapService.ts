@@ -222,7 +222,8 @@ export class RoadmapService {
     }, studentId);
 
     // Submit the project for approval
-    await ProjectService.submitProject(project.id, studentId);
+    const projectId = project._id.toString();
+    await ProjectService.submitProject(projectId, studentId);
 
     // Update milestone status to pending-approval
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
@@ -286,11 +287,18 @@ export class RoadmapService {
         status: 'completed',
         updatedAt: new Date()
       });
+    }
 
-      // Update student onboarding status
-      await StudentModel.findByIdAndUpdate(roadmap.student, {
-        'onboardingStatus.learningCompleted': true
+    try {
+      const { CertificateService } = await import('./certificateService');
+      await CertificateService.issueForMilestone({
+        roadmapId,
+        milestoneOrder: milestoneId,
+        studentId: roadmap.student,
+        trainerId,
       });
+    } catch (error) {
+      console.warn('Failed to issue certificate:', error);
     }
 
     return updatedRoadmap;

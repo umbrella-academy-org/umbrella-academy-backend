@@ -135,9 +135,13 @@ export class ProjectController {
     try {
       const { userId } = req.user!;
       const projectId = req.params.id as string;
-      const { feedback } = req.body as { feedback: string };
+      const { feedback, trainerFeedback } = req.body as {
+        feedback?: string;
+        trainerFeedback?: string;
+      };
+      const resolvedFeedback = feedback ?? trainerFeedback;
 
-      const project = await ProjectService.approveProject(projectId, userId, feedback);
+      const project = await ProjectService.approveProject(projectId, userId, resolvedFeedback ?? '');
       res.json({ 
         success: true, 
         data: project,
@@ -161,16 +165,20 @@ export class ProjectController {
     try {
       const { userId } = req.user!;
       const projectId = req.params.id as string;
-      const { feedback } = req.body as { feedback: string };
+      const { feedback, trainerFeedback } = req.body as {
+        feedback?: string;
+        trainerFeedback?: string;
+      };
+      const resolvedFeedback = feedback ?? trainerFeedback;
 
-      if (!feedback) {
+      if (!resolvedFeedback) {
         return res.status(400).json({ 
           success: false, 
           message: 'Rejection feedback is required' 
         });
       }
 
-      const project = await ProjectService.rejectProject(projectId, userId, feedback);
+      const project = await ProjectService.rejectProject(projectId, userId, resolvedFeedback);
       res.json({ 
         success: true, 
         data: project,

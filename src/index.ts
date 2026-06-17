@@ -22,6 +22,7 @@ import projectRoutes from './routes/projects'; // Importing projects route
 import promoCodeRoutes from './routes/promoCodes';
 import promoCodePublicRoutes from './routes/promoCodesPublic';
 import guardianRoutes from './routes/guardian';
+import certificateRoutes from './routes/certificates';
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use('/api/projects', projectRoutes); // Importing projects route
 app.use('/api/admin/promo-codes', promoCodeRoutes);
 app.use('/api/promo-codes', promoCodePublicRoutes);
 app.use('/api/guardian', guardianRoutes);
+app.use('/api/certificates', certificateRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
