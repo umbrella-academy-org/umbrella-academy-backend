@@ -176,6 +176,34 @@ export class RoadmapController {
     }
   }
 
+  // DELETE /api/roadmaps/:id - delete roadmap (trainers only)
+  static async deleteRoadmap(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const roadmapId = req.params.id as string;
+
+      const result = await RoadmapService.deleteRoadmap(roadmapId, userId);
+      res.json({
+        success: true,
+        data: result,
+        message: 'Roadmap deleted successfully',
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (
+          err.message.includes('Access denied') ||
+          err.message.includes('Only draft or rejected')
+        ) {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
   // POST /api/roadmaps/:roadmapId/milestones/:milestoneId/complete - complete milestone (students only)
   static async completeMilestone(req: Request, res: Response, next: NextFunction) {
     try {
@@ -238,6 +266,43 @@ export class RoadmapController {
           return res.status(404).json({ success: false, message: err.message });
         }
         if (err.message === 'Milestone must be in pending-approval status to be approved') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  // POST /api/roadmaps/:roadmapId/milestones/:milestoneId/reject - reject milestone (trainers only)
+  static async rejectMilestone(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const { roadmapId, milestoneId } = req.params as { roadmapId: string; milestoneId: string };
+      const { feedback, trainerFeedback } = req.body as {
+        feedback?: string;
+        trainerFeedback?: string;
+      };
+
+      const roadmap = await RoadmapService.rejectMilestone(
+        roadmapId,
+        parseInt(milestoneId, 10),
+        userId,
+        feedback ?? trainerFeedback ?? ''
+      );
+      res.json({
+        success: true,
+        data: roadmap,
+        message: 'Milestone rejected — student can revise and resubmit',
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found' || err.message === 'Milestone not found in this roadmap') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (
+          err.message.includes('Access denied') ||
+          err.message === 'Milestone must be in pending-approval status to be rejected'
+        ) {
           return res.status(400).json({ success: false, message: err.message });
         }
       }

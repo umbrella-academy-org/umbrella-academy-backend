@@ -301,7 +301,116 @@ export class RoadmapService {
       console.warn('Failed to issue certificate:', error);
     }
 
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: roadmap.student,
+        title: 'Milestone completed',
+        message: feedback
+          ? `Your trainer approved "${milestone.title}": ${feedback}`
+          : `Your trainer approved "${milestone.title}".`,
+        category: 'roadmap',
+        actionUrl: '/dashboard/student/roadmap',
+        relatedEntityId: roadmapId,
+      });
+    } catch (error) {
+      console.warn('Failed to create milestone approval notification:', error);
+    }
+
     return updatedRoadmap;
+  }
+
+  static async rejectMilestone(
+    roadmapId: string,
+    milestoneId: number,
+    trainerId: string,
+    feedback: string
+  ) {
+    const roadmap = await RoadmapModel.findById(roadmapId);
+    if (!roadmap) {
+      throw new Error('Roadmap not found');
+    }
+
+    if (roadmap.trainer !== trainerId) {
+      throw new Error('Access denied: Only the assigned trainer can reject milestones');
+    }
+
+    const milestone = roadmap.milestones.find((m) => m.order == milestoneId);
+    if (!milestone) {
+      throw new Error('Milestone not found in this roadmap');
+    }
+
+    if (milestone.status !== 'pending-approval') {
+      throw new Error('Milestone must be in pending-approval status to be rejected');
+    }
+
+    const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
+      {
+        _id: roadmapId,
+        'milestones.order': milestoneId,
+      },
+      {
+        $set: {
+          'milestones.$.status': 'active',
+          'milestones.$.trainerFeedback': feedback || null,
+          updatedAt: new Date(),
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    try {
+      const { ProjectModel, ProjectStatus } = await import('../models/Project');
+      await ProjectModel.findOneAndUpdate(
+        {
+          roadmap: roadmapId,
+          milestoneId,
+          status: ProjectStatus.PENDING_APPROVAL,
+        },
+        {
+          status: ProjectStatus.REJECTED,
+          trainerFeedback: feedback,
+        }
+      );
+    } catch (error) {
+      console.warn('Failed to reject linked project:', error);
+    }
+
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: roadmap.student,
+        title: 'Milestone needs revision',
+        message: feedback
+          ? `Your trainer requested changes on "${milestone.title}": ${feedback}`
+          : `Your trainer requested changes on "${milestone.title}".`,
+        category: 'roadmap',
+        actionUrl: '/dashboard/student/roadmap',
+        relatedEntityId: roadmapId,
+      });
+    } catch (error) {
+      console.warn('Failed to create milestone rejection notification:', error);
+    }
+
+    return updatedRoadmap;
+  }
+
+  static async deleteRoadmap(roadmapId: string, trainerId: string) {
+    const roadmap = await RoadmapModel.findById(roadmapId);
+    if (!roadmap) {
+      throw new Error('Roadmap not found');
+    }
+
+    if (roadmap.trainer !== trainerId) {
+      throw new Error('Access denied: Only the assigned trainer can delete this roadmap');
+    }
+
+    if (!['draft', 'rejected'].includes(roadmap.status)) {
+      throw new Error('Only draft or rejected roadmaps can be deleted');
+    }
+
+    await RoadmapModel.findByIdAndDelete(roadmapId);
+    return { deleted: true };
   }
 
   static async activateNextMilestone(roadmapId: string, studentId: string) {

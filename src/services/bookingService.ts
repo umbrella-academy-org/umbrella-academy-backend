@@ -131,6 +131,21 @@ export class BookingService {
       'onboardingStatus.orientationBooked': true,
     });
 
+    try {
+      const { NotificationService } = await import('./notificationService');
+      const studentName = `${student.firstName} ${student.lastName}`.trim() || 'A student';
+      await NotificationService.create({
+        userId: trainerId,
+        title: 'New booking request',
+        message: `${studentName} requested an orientation session.`,
+        category: 'booking',
+        actionUrl: '/dashboard/trainer/bookings',
+        relatedEntityId: bookingId,
+      });
+    } catch (error) {
+      console.warn('Failed to create booking notification:', error);
+    }
+
     return this.formatBooking(booking);
   }
 
@@ -249,6 +264,20 @@ export class BookingService {
       });
     }
 
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: String(booking.student),
+        title: 'Session approved',
+        message: `${trainerName} approved your orientation session.`,
+        category: 'booking',
+        actionUrl: '/dashboard/student/calendar',
+        relatedEntityId: bookingId,
+      });
+    } catch (error) {
+      console.warn('Failed to create booking approval notification:', error);
+    }
+
     return this.formatBooking(booking);
   }
 
@@ -269,6 +298,22 @@ export class BookingService {
     await StudentModel.findByIdAndUpdate(booking.student, {
       'onboardingStatus.orientationBooked': false,
     });
+
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: String(booking.student),
+        title: 'Booking declined',
+        message: rejectionReason.trim()
+          ? `Your booking request was declined: ${rejectionReason.trim()}`
+          : 'Your booking request was declined.',
+        category: 'booking',
+        actionUrl: '/dashboard/student/calendar',
+        relatedEntityId: bookingId,
+      });
+    } catch (error) {
+      console.warn('Failed to create booking rejection notification:', error);
+    }
 
     return this.formatBooking(booking);
   }

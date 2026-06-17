@@ -89,6 +89,20 @@ export class CertificateService {
     certificate.pdfUrl = `/api/certificates/${certificate._id.toString()}/view`;
     await certificate.save();
 
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: params.studentId,
+        title: 'Certificate issued',
+        message: `You earned a certificate for completing "${milestone.title}".`,
+        category: 'certificate',
+        actionUrl: '/dashboard/student/certificates',
+        relatedEntityId: certificate._id.toString(),
+      });
+    } catch (error) {
+      console.warn('Failed to create certificate notification:', error);
+    }
+
     return certificate;
   }
 

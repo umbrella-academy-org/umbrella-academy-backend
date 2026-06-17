@@ -202,6 +202,22 @@ export class ProjectService {
       }
     }
 
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: String(project.student),
+        title: 'Project approved',
+        message: feedback
+          ? `Your project "${project.title}" was approved: ${feedback}`
+          : `Your project "${project.title}" was approved.`,
+        category: 'project',
+        actionUrl: '/dashboard/student/projects',
+        relatedEntityId: projectId,
+      });
+    } catch (error) {
+      console.warn('Failed to create project approval notification:', error);
+    }
+
     return updatedProject;
   }
 
@@ -225,6 +241,22 @@ export class ProjectService {
       },
       { new: true, runValidators: true }
     );
+
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: String(project.student),
+        title: 'Project needs revision',
+        message: feedback
+          ? `Your project "${project.title}" needs changes: ${feedback}`
+          : `Your project "${project.title}" needs changes.`,
+        category: 'project',
+        actionUrl: '/dashboard/student/projects',
+        relatedEntityId: projectId,
+      });
+    } catch (error) {
+      console.warn('Failed to create project rejection notification:', error);
+    }
 
     return updatedProject;
   }
