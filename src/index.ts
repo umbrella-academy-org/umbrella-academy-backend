@@ -6,6 +6,7 @@ import connectDB from './config/db';
 import { initSocket } from './services/socket';
 import { verifySmtpConnection } from './services/emailService';
 import { ZoomService } from './services/zoomService';
+import { startSubscriptionMaintenanceScheduler } from './services/subscriptionMaintenanceService';
 import './seed/seedOwner';
 
 import authRoutes from './routes/auth';
@@ -87,6 +88,7 @@ const startServer = async () => {
     }
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      startSubscriptionMaintenanceScheduler();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

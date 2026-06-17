@@ -69,9 +69,13 @@ export interface Guardian extends BaseUser {
   passwordSetAt: Date | null;
 }
 
+export type AgeRange = 'under-13' | '13-17' | '18-24' | '25-34' | '35+';
+
 export interface Student extends BaseUser {
   role: UserRole.STUDENT;
+  ageRange?: AgeRange;
   guardianId: string|null;
+  guardianRelationship?: string | null;
   hasPaidOrientation: boolean;
   hasActiveSubscription: boolean;
   subscriptionExpiryDate: Date | null;
@@ -126,7 +130,13 @@ const userSchema = new Schema<BaseUser>({
 
 // Student Discriminator
 const studentSchema = new Schema<Student>({
+  ageRange: {
+    type: String,
+    enum: ['under-13', '13-17', '18-24', '25-34', '35+'],
+    default: null,
+  },
   guardianId: { type: Schema.Types.ObjectId, ref: 'User' },
+  guardianRelationship: { type: String, default: null },
   hasPaidOrientation: { type: Boolean, default: false },
   hasActiveSubscription: { type: Boolean, default: false },
   subscriptionExpiryDate: { type: Date, default: null },

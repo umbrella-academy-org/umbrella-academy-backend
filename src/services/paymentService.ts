@@ -131,7 +131,8 @@ export class PaymentService {
     // Create subscription record
     await this.createOrUpdateSubscription(studentId);
 
-    await user.updateOne({ $set: { hasActiveSubscription: true } });
+    const { SubscriptionMaintenanceService } = await import('./subscriptionMaintenanceService');
+    await SubscriptionMaintenanceService.syncStudentSubscription(studentId);
 
     return {
       payment,
@@ -182,22 +183,8 @@ export class PaymentService {
   }
 
   static async getSubscriptionStatus(studentId: string) {
-    const subscription = await SubscriptionModel.findOne({ student: studentId });
-    if (!subscription) {
-      return null;
-    }
-
-    // Update days remaining and color code
-    const now = new Date();
-    const expiryDate = new Date(subscription.expiryDate);
-    const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    subscription.daysRemaining = Math.max(0, daysRemaining);
-    subscription.colorCode = this.getSubscriptionColor(daysRemaining);
-    subscription.isActive = daysRemaining > 0;
-
-    await subscription.save();
-    return subscription;
+    const { SubscriptionMaintenanceService } = await import('./subscriptionMaintenanceService');
+    return SubscriptionMaintenanceService.syncStudentSubscription(studentId);
   }
 
   private static async validatePromoCode(code: string, studentId: string): Promise<PromoCode | null> {
@@ -236,7 +223,7 @@ export class PaymentService {
     const expiryDate = new Date();
     expiryDate.setMonth(expiryDate.getMonth() + 1); // Add 1 month
 
-    const existingSubscription = await SubscriptionModel.findOne({ studentId });
+    const existingSubscription = await SubscriptionModel.findOne({ student: studentId });
 
     if (existingSubscription) {
       // Extend existing subscription

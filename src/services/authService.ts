@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist } from '../models/User';
+import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist, UserRole, Guardian } from '../models/User';
 import { queueEmail } from '../services/emailService';
 import { GuardianService } from './guardianService';
 import { ApiResponse } from '@/interfaces/api';
@@ -12,55 +12,88 @@ export class AuthService {
     return jwt.sign({ userId, role }, secret, { expiresIn: '7d' });
   }
 
+  static requiresGuardian(ageRange?: string) {
+    return ageRange === 'under-13' || ageRange === '13-17';
+  }
+
   static async registerStudent(studentData: StudentRegister) {
-    const { guardianName, guardianEmail, guardianPhoneNumber, ...studentInfo } = studentData;
-    const student = studentInfo as any;
+    const {
+      guardianName,
+      guardianEmail,
+      guardianPhoneNumber,
+      guardianRelationship,
+      ageRange,
+      ...studentInfo
+    } = studentData;
+    const student = studentInfo as Record<string, unknown>;
 
-    const hashedPassword = await bcrypt.hash(student.password, 10);
+    const hasGuardianDetails = Boolean(guardianEmail?.trim());
+    if (AuthService.requiresGuardian(ageRange) && !hasGuardianDetails) {
+      throw new Error('Guardian information is required for students under 18');
+    }
+
+    if (hasGuardianDetails && (!guardianName?.trim() || !guardianEmail?.trim())) {
+      throw new Error('Guardian name and email are required when adding a guardian');
+    }
+
+    const hashedPassword = await bcrypt.hash(String(student.password), 10);
     student.password = hashedPassword;
+    if (ageRange) {
+      student.ageRange = ageRange;
+    }
 
-    const guardian = {
-      firstName: guardianName,
-      email: guardianEmail,
-      phoneNumber: guardianPhoneNumber,
-      lastName: "unknown",
-      password: "unknown",
-    };
+    let savedGuardian: Guardian | null = null;
+    if (hasGuardianDetails) {
+      savedGuardian = await GuardianModel.create({
+        firstName: guardianName!.trim(),
+        email: guardianEmail!.trim().toLowerCase(),
+        phoneNumber: guardianPhoneNumber?.trim() || '',
+        lastName: 'Guardian',
+        password: 'pending-invite',
+        role: UserRole.GUARDIAN,
+      });
+      student.guardianId = savedGuardian._id;
+      student.guardianRelationship = guardianRelationship?.trim() || null;
+    }
 
-    const savedGuardian = await GuardianModel.create(guardian);
-    student.guardianId = savedGuardian.id;
     const savedStudent = await StudentModel.create(student);
-    savedGuardian.linkedStudentIds.push(savedStudent.id);
-    await savedGuardian.save();
 
-    // Queue guardian invitation + student OTP without blocking registration response
+    if (savedGuardian) {
+      savedGuardian.linkedStudentIds.push(savedStudent._id.toString());
+      await savedGuardian.save();
+
+      try {
+        const invitationToken = GuardianService.generateInvitationToken(
+          savedGuardian._id.toString(),
+          savedStudent._id.toString()
+        );
+
+        GuardianService.sendGuardianInvitation(
+          savedGuardian.email,
+          savedGuardian.firstName,
+          `${savedStudent.firstName} ${savedStudent.lastName}`,
+          invitationToken
+        );
+      } catch (error) {
+        console.warn('Failed to queue guardian invitation email:', error);
+      }
+    }
+
     try {
-      const invitationToken = GuardianService.generateInvitationToken(
-        savedGuardian._id.toString(),
-        savedStudent._id.toString()
-      );
-
       await AuthService.issueOtpForEmail(savedStudent.email);
-
-      GuardianService.sendGuardianInvitation(
-        savedGuardian.email,
-        savedGuardian.firstName,
-        `${savedStudent.firstName} ${savedStudent.lastName}`,
-        invitationToken
-      );
     } catch (error) {
-      console.warn('Failed to queue guardian invitation or student OTP email:', error);
+      console.warn('Failed to queue student OTP email:', error);
     }
 
     const token = AuthService.signToken(String(savedStudent._id), savedStudent.role);
 
     return {
       success: true,
-      message: "Student registered successfully",
+      message: 'Student registered successfully',
       data: {
         token,
-        user: savedStudent.toJSON()
-      }
+        user: savedStudent.toJSON(),
+      },
     } as ApiResponse;
   }
 
