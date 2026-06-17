@@ -228,7 +228,7 @@ export class BookingService {
     await booking.save();
 
     await StudentModel.findByIdAndUpdate(booking.student, {
-      assignedTrainer: trainerId,
+      assignedTrainerId: trainerId,
     });
 
     if (student.email && trainer.email) {

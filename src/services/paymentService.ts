@@ -182,7 +182,7 @@ export class PaymentService {
   }
 
   static async getSubscriptionStatus(studentId: string) {
-    const subscription = await SubscriptionModel.findOne({ studentId });
+    const subscription = await SubscriptionModel.findOne({ student: studentId });
     if (!subscription) {
       return null;
     }
@@ -292,8 +292,7 @@ export class PaymentService {
   }
 
   static async getPaymentHistory(studentId: string) {
-    const payments = await PaymentModel.find({ studentId })
-      .populate('student', 'name email')
+    const payments = await PaymentModel.find({ student: studentId })
       .sort({ createdAt: -1 })
       .select('-__v');
 
