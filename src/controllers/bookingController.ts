@@ -97,10 +97,10 @@ export class BookingController {
       // Validate all required approval fields
       const { approvalNotes, sessionDuration, sessionFormat, sessionLocation, preparationRequirements, nextSteps } = approvalData;
       
-      if (!approvalNotes || !sessionDuration || !sessionFormat || !sessionLocation || !preparationRequirements || !nextSteps) {
+      if (!approvalNotes?.trim() || !sessionDuration || !sessionFormat || !sessionLocation?.trim()) {
         return res.status(400).json({
           success: false,
-          message: 'All approval fields are required: approvalNotes, sessionDuration, sessionFormat, sessionLocation, preparationRequirements, nextSteps'
+          message: 'Approval notes, session duration, format, and location are required'
         });
       }
 

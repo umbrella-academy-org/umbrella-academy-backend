@@ -116,9 +116,12 @@ export class CertificateService {
       throw new Error('Certificate not found');
     }
 
+    const studentId = String(certificate.student);
+    const trainerId = String(certificate.trainer);
+
     if (role === 'admin') return certificate;
-    if (role === 'student' && certificate.student === userId) return certificate;
-    if (role === 'trainer' && certificate.trainer === userId) return certificate;
+    if (role === 'student' && studentId === userId) return certificate;
+    if (role === 'trainer' && trainerId === userId) return certificate;
 
     throw new Error('Access denied');
   }

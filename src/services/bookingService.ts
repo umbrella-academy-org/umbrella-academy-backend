@@ -2,28 +2,81 @@ import { BookingModel, BookingStatus, Booking, StudentBookingRequest, TrainerApp
 import { StudentModel, TrainerModel } from '../models/User';
 import { PaymentModel, PaymentType } from '../models/Payment';
 
+type PopulatedUser = {
+  _id?: unknown;
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+};
+
 export class BookingService {
+  private static formatUserRef(user: unknown) {
+    if (!user) {
+      return { _id: '', firstName: 'Unknown', lastName: '', email: '' };
+    }
+
+    if (typeof user === 'string') {
+      return { _id: user, firstName: 'User', lastName: '', email: '' };
+    }
+
+    const populated = user as PopulatedUser;
+    return {
+      _id: String(populated._id ?? populated.id ?? ''),
+      firstName: populated.firstName ?? '',
+      lastName: populated.lastName ?? '',
+      email: populated.email ?? '',
+    };
+  }
+
+  private static formatBooking(booking: Booking | Record<string, unknown>) {
+    const doc =
+      typeof (booking as Booking).toObject === 'function'
+        ? (booking as Booking).toObject()
+        : booking;
+
+    const record = doc as Record<string, unknown>;
+
+    return {
+      _id: String(record._id ?? ''),
+      id: String(record.id ?? ''),
+      student: this.formatUserRef(record.student),
+      trainer: this.formatUserRef(record.trainer),
+      requestedTime: record.requestedTime,
+      learningGoals: record.learningGoals,
+      status: record.status,
+      rejectionReason: record.rejectionReason ?? undefined,
+      approvalNotes: record.approvalNotes ?? undefined,
+      sessionDuration: record.sessionDuration ?? undefined,
+      sessionFormat: record.sessionFormat ?? undefined,
+      sessionLocation: record.sessionLocation ?? undefined,
+      preparationRequirements: record.preparationRequirements ?? undefined,
+      nextSteps: record.nextSteps ?? undefined,
+      approvedAt: record.approvedAt ?? undefined,
+      completedAt: record.completedAt ?? undefined,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    };
+  }
+
   static async createBooking(studentId: string, bookingRequest: StudentBookingRequest) {
     const { trainerId, requestedTime, learningGoals } = bookingRequest;
 
-    // Validate student exists and has paid orientation
     const student = await StudentModel.findById(studentId);
     if (!student) {
       throw new Error('Student not found');
     }
 
-    // Check if student has paid orientation fee
     const orientationPayment = await PaymentModel.findOne({
-      studentId,
+      student: studentId,
       type: PaymentType.ORIENTATION,
-      status: 'success'
+      status: 'success',
     });
 
     if (!orientationPayment) {
       throw new Error('Orientation payment must be completed before booking');
     }
 
-    // Validate trainer exists and is approved
     const trainer = await TrainerModel.findById(trainerId);
     if (!trainer) {
       throw new Error('Trainer not found');
@@ -33,30 +86,27 @@ export class BookingService {
       throw new Error('Trainer is not approved for bookings');
     }
 
-    // Check if student already has a pending booking
     const existingPendingBooking = await BookingModel.findOne({
-      studentId,
-      status: BookingStatus.PENDING
+      student: studentId,
+      status: BookingStatus.PENDING,
     });
 
     if (existingPendingBooking) {
       throw new Error('You already have a pending booking request');
     }
 
-    // Validate requested time is in the future
     const requestedDate = new Date(requestedTime);
-    if (requestedDate <= new Date()) {
+    if (Number.isNaN(requestedDate.getTime()) || requestedDate <= new Date()) {
       throw new Error('Booking time must be in the future');
     }
 
-    // Check for scheduling conflicts with trainer
     const conflictingBooking = await BookingModel.findOne({
-      trainerId,
+      trainer: trainerId,
       requestedTime: {
-        $gte: new Date(requestedDate.getTime() - 60 * 60 * 1000), // 1 hour before
-        $lte: new Date(requestedDate.getTime() + 60 * 60 * 1000)  // 1 hour after
+        $gte: new Date(requestedDate.getTime() - 60 * 60 * 1000),
+        $lte: new Date(requestedDate.getTime() + 60 * 60 * 1000),
       },
-      status: { $in: [BookingStatus.APPROVED, BookingStatus.PENDING] }
+      status: { $in: [BookingStatus.APPROVED, BookingStatus.PENDING] },
     });
 
     if (conflictingBooking) {
@@ -71,19 +121,18 @@ export class BookingService {
       trainer: trainerId,
       requestedTime: requestedDate,
       learningGoals,
-      status: BookingStatus.PENDING
+      status: BookingStatus.PENDING,
     });
 
-    // Update student's onboarding status
     await StudentModel.findByIdAndUpdate(studentId, {
-      'onboardingStatus.orientationBooked': true
+      'onboardingStatus.orientationBooked': true,
     });
 
-    return booking;
+    return this.formatBooking(booking);
   }
 
   static async getStudentBookings(studentId: string, status?: BookingStatus) {
-    const filter: any = { student: studentId };
+    const filter: Record<string, unknown> = { student: studentId };
     if (status) {
       filter.status = status;
     }
@@ -91,10 +140,12 @@ export class BookingService {
     const bookings = await BookingModel.find(filter)
       .populate('trainer', 'firstName lastName email')
       .sort({ createdAt: -1 });
-    return bookings;
+
+    return bookings.map((booking) => this.formatBooking(booking));
   }
+
   static async getTrainerBookings(trainerId: string, bookingStatus?: BookingStatus) {
-    const filter: any = { trainer: trainerId };
+    const filter: Record<string, unknown> = { trainer: trainerId };
     if (bookingStatus) {
       filter.status = bookingStatus;
     }
@@ -103,7 +154,7 @@ export class BookingService {
       .populate('student', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
-    return bookings;
+    return bookings.map((booking) => this.formatBooking(booking));
   }
 
   static async approveBooking(bookingId: string, trainerId: string, approvalData: TrainerApprovalRequest) {
@@ -121,32 +172,30 @@ export class BookingService {
       sessionDuration,
       sessionFormat,
       sessionLocation,
-      preparationRequirements,
-      nextSteps
+      preparationRequirements = '',
+      nextSteps = '',
     } = approvalData;
 
-    // Validate approval data
-    if (!approvalNotes || !sessionDuration || !sessionFormat || !sessionLocation || !preparationRequirements || !nextSteps) {
-      throw new Error('All approval fields are required');
+    if (!approvalNotes?.trim() || !sessionDuration || !sessionFormat || !sessionLocation?.trim()) {
+      throw new Error('Approval notes, duration, format, and location are required');
     }
 
     booking.status = BookingStatus.APPROVED;
     booking.approvedAt = new Date();
-    booking.approvalNotes = approvalNotes;
+    booking.approvalNotes = approvalNotes.trim();
     booking.sessionDuration = sessionDuration;
     booking.sessionFormat = sessionFormat;
-    booking.sessionLocation = sessionLocation;
-    booking.preparationRequirements = preparationRequirements;
-    booking.nextSteps = nextSteps;
+    booking.sessionLocation = sessionLocation.trim();
+    booking.preparationRequirements = preparationRequirements.trim();
+    booking.nextSteps = nextSteps.trim();
 
     await booking.save();
 
-    // Assign trainer to student
     await StudentModel.findByIdAndUpdate(booking.student, {
-      assignedTrainer: trainerId
+      assignedTrainer: trainerId,
     });
 
-    return booking;
+    return this.formatBooking(booking);
   }
 
   static async rejectBooking(bookingId: string, trainerId: string, rejectionReason: string) {
@@ -160,15 +209,14 @@ export class BookingService {
     }
 
     booking.status = BookingStatus.REJECTED;
-    booking.rejectionReason = rejectionReason;
+    booking.rejectionReason = rejectionReason.trim();
     await booking.save();
 
-    // Update student's onboarding status
     await StudentModel.findByIdAndUpdate(booking.student, {
-      'onboardingStatus.orientationBooked': false
+      'onboardingStatus.orientationBooked': false,
     });
 
-    return booking;
+    return this.formatBooking(booking);
   }
 
   static async completeBooking(bookingId: string, trainerId: string) {
@@ -185,7 +233,7 @@ export class BookingService {
     booking.completedAt = new Date();
     await booking.save();
 
-    return booking;
+    return this.formatBooking(booking);
   }
 
   static async cancelBooking(bookingId: string, userId: string, userRole: string) {
@@ -194,12 +242,14 @@ export class BookingService {
       throw new Error('Booking not found');
     }
 
-    // Check if user has permission to cancel
-    if (userRole === 'student' && booking.student !== userId) {
+    const studentId = String(booking.student);
+    const bookingTrainerId = String(booking.trainer);
+
+    if (userRole === 'student' && studentId !== userId) {
       throw new Error('You can only cancel your own bookings');
     }
 
-    if (userRole === 'trainer' && booking.trainer !== userId) {
+    if (userRole === 'trainer' && bookingTrainerId !== userId) {
       throw new Error('You can only cancel your own bookings');
     }
 
@@ -214,20 +264,19 @@ export class BookingService {
     booking.status = BookingStatus.CANCELLED;
     await booking.save();
 
-    // Update student's onboarding status if this was an orientation booking
-    if (booking.student === userId) {
-      await StudentModel.findByIdAndUpdate(booking.student, {
-        'onboardingStatus.orientationBooked': false
+    if (studentId === userId) {
+      await StudentModel.findByIdAndUpdate(studentId, {
+        'onboardingStatus.orientationBooked': false,
       });
     }
 
-    return booking;
+    return this.formatBooking(booking);
   }
 
   static async getAvailableTrainers() {
     const trainers = await TrainerModel.find({
       approvalStatus: 'approved',
-      isActive: true
+      isActive: true,
     }).select('firstName lastName email skills experience');
 
     return trainers;
@@ -242,11 +291,11 @@ export class BookingService {
       throw new Error('Booking not found');
     }
 
-    return booking;
+    return this.formatBooking(booking);
   }
 
   static async getAllBookings(status?: BookingStatus) {
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (status) {
       filter.status = status;
     }
@@ -256,7 +305,7 @@ export class BookingService {
       .populate('trainer', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
-    return bookings;
+    return bookings.map((booking) => this.formatBooking(booking));
   }
 
   private static generateBookingId(): string {
