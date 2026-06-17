@@ -134,6 +134,13 @@ export class PaymentService {
     const { SubscriptionMaintenanceService } = await import('./subscriptionMaintenanceService');
     await SubscriptionMaintenanceService.syncStudentSubscription(studentId);
 
+    try {
+      const { SalesLeadService } = await import('./salesLeadService');
+      await SalesLeadService.markSubscribed(studentId);
+    } catch (error) {
+      console.warn('Failed to update sales lead for subscription:', error);
+    }
+
     return {
       payment,
       amount: finalAmount,
@@ -159,6 +166,12 @@ export class PaymentService {
     // If it's a subscription payment, create/update subscription
     if (payment.type === PaymentType.SUBSCRIPTION) {
       await this.createOrUpdateSubscription(payment.student);
+      try {
+        const { SalesLeadService } = await import('./salesLeadService');
+        await SalesLeadService.markSubscribed(String(payment.student));
+      } catch (error) {
+        console.warn('Failed to update sales lead for subscription:', error);
+      }
     }
 
     return payment;

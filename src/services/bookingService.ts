@@ -3,6 +3,8 @@ import { StudentModel, TrainerModel } from '../models/User';
 import { PaymentModel, PaymentType } from '../models/Payment';
 import { ZoomService } from './zoomService';
 import { queueSessionApprovedEmails } from './sessionEmailService';
+import { AvailabilityService } from './availabilityService';
+import { SalesLeadService } from './salesLeadService';
 
 type PopulatedUser = {
   _id?: unknown;
@@ -103,6 +105,8 @@ export class BookingService {
       throw new Error('Booking time must be in the future');
     }
 
+    await AvailabilityService.assertSlotAvailable(trainerId, requestedDate);
+
     const conflictingBooking = await BookingModel.findOne({
       trainer: trainerId,
       requestedTime: {
@@ -144,6 +148,12 @@ export class BookingService {
       });
     } catch (error) {
       console.warn('Failed to create booking notification:', error);
+    }
+
+    try {
+      await SalesLeadService.markOrientationBooked(studentId);
+    } catch (error) {
+      console.warn('Failed to update sales lead for booking:', error);
     }
 
     return this.formatBooking(booking);

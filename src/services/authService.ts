@@ -85,6 +85,13 @@ export class AuthService {
       console.warn('Failed to queue student OTP email:', error);
     }
 
+    try {
+      const { SalesLeadService } = await import('./salesLeadService');
+      await SalesLeadService.upsertFromStudent(savedStudent);
+    } catch (error) {
+      console.warn('Failed to create sales lead:', error);
+    }
+
     const token = AuthService.signToken(String(savedStudent._id), savedStudent.role);
 
     return {

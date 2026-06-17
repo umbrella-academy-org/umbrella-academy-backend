@@ -27,6 +27,7 @@ import guardianRoutes from './routes/guardian';
 import certificateRoutes from './routes/certificates';
 import notificationRoutes from './routes/notifications';
 import publicRoutes from './routes/public';
+import salesRoutes from './routes/sales';
 
 const app = express();
 
@@ -64,6 +65,7 @@ app.use('/api/guardian', guardianRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/sales', salesRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

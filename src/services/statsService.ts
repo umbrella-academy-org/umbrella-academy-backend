@@ -1,6 +1,7 @@
 import { StudentModel, TrainerModel, UserModel } from '../models/User';
 import { PaymentModel } from '../models/Payment';
 import { RoadmapModel } from '../models/Roadmap';
+import { CertificateModel } from '../models/Certificate';
 import { BookingModel, BookingStatus } from '../models/Booking';
 
 export class StatsService {
@@ -85,12 +86,18 @@ export class StatsService {
     const monthlyRevenue = monthlyRevenueAgg[0]?.total ?? 0;
 
     const activeRoadmaps = await RoadmapModel.countDocuments({ status: 'active' });
+    const pendingTrainers = await TrainerModel.countDocuments({ approvalStatus: 'pending' });
+    const activeSubscriptions = await StudentModel.countDocuments({ hasActiveSubscription: true });
+    const totalCertificates = await CertificateModel.countDocuments({});
 
     return {
       usersByRole: { student: studentCount, trainer: trainerCount },
       totalRevenue,
       monthlyRevenue,
       activeRoadmaps,
+      pendingTrainers,
+      activeSubscriptions,
+      totalCertificates,
     };
   }
 }

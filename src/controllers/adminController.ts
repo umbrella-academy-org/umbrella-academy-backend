@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { StatsService } from '../services/statsService';
 import { AdminService } from '../services/adminService';
+import { CertificateService } from '../services/certificateService';
 
 export class AdminController {
   // GET /api/admin/analytics - platform-wide stats
@@ -12,6 +13,16 @@ export class AdminController {
         success: true,
         data: analytics,
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getAllCertificates(req: Request, res: Response, next: NextFunction) {
+    try {
+      const search = req.query.search as string | undefined;
+      const certificates = await CertificateService.getAllCertificates(search);
+      res.json({ success: true, data: certificates });
     } catch (err) {
       next(err);
     }

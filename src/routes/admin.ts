@@ -8,6 +8,13 @@ const router = Router();
 // GET /api/admin/analytics — platform-wide stats (Requirement 10.8)
 router.get('/analytics', authenticate, requireRole('admin'), AdminController.getAnalytics);
 
+router.get(
+  '/certificates',
+  authenticate,
+  requireRole('admin'),
+  AdminController.getAllCertificates
+);
+
 // Trainer approval endpoints
 // GET /api/admin/trainers/pending - get pending trainer applications
 router.get('/trainers/pending', authenticate, requireRole('admin'), AdminController.getPendingTrainers);

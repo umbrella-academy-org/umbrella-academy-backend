@@ -1,8 +1,11 @@
 import { randomBytes } from 'crypto';
-import PDFDocument from 'pdfkit';
+import type PDFKit from 'pdfkit';
 import { CertificateModel, Certificate } from '../models/Certificate';
 import { RoadmapModel } from '../models/Roadmap';
 import { UserModel, GuardianModel } from '../models/User';
+
+// Standalone bundle avoids broken/partial npm installs for fontkit sub-deps.
+const PDFDocument = require('pdfkit/js/pdfkit.standalone.js') as typeof PDFKit;
 
 function generateCertificateNumber(): string {
   const suffix = randomBytes(4).toString('hex').toUpperCase();
@@ -109,6 +112,25 @@ export class CertificateService {
 
   static async getStudentCertificates(studentId: string) {
     const certificates = await CertificateModel.find({ student: studentId })
+      .sort({ completionDate: -1 })
+      .lean();
+
+    return certificates.map((certificate) => this.formatCertificate(certificate));
+  }
+
+  static async getAllCertificates(search?: string) {
+    const query: Record<string, unknown> = {};
+    if (search?.trim()) {
+      const pattern = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { studentName: pattern },
+        { certificateNumber: pattern },
+        { milestoneName: pattern },
+        { trainerName: pattern },
+      ];
+    }
+
+    const certificates = await CertificateModel.find(query)
       .sort({ completionDate: -1 })
       .lean();
 
