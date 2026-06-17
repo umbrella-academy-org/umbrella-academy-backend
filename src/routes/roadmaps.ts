@@ -40,6 +40,13 @@ router.post('/:roadmapId/milestones/:milestoneId/approve', authenticate, require
 // POST /api/roadmaps/:roadmapId/milestones/:milestoneId/reject - reject milestone (trainers only)
 router.post('/:roadmapId/milestones/:milestoneId/reject', authenticate, requireRole('trainer'), RoadmapController.rejectMilestone);
 
+router.patch(
+  '/:roadmapId/milestones/:milestoneId/lock',
+  authenticate,
+  requireRole('trainer'),
+  RoadmapController.setMilestoneLockState
+);
+
 // POST /api/roadmaps/:roadmapId/activate-next-milestone - activate next milestone (students only)
 router.post('/:roadmapId/activate-next-milestone', authenticate, requireRole('student'), RoadmapController.activateNextMilestone);
 

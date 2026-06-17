@@ -228,7 +228,7 @@ export class RoadmapController {
         if (err.message === 'Access denied: This roadmap does not belong to the student') {
           return res.status(403).json({ success: false, message: err.message });
         }
-        if (err.message === 'Milestone must be active or locked to be completed') {
+        if (err.message === 'Milestone must be active to submit a project for approval') {
           return res.status(400).json({ success: false, message: err.message });
         }
       }
@@ -320,7 +320,7 @@ export class RoadmapController {
       res.json({
         success: true,
         data: roadmap,
-        message: 'Next milestone activated successfully'
+        message: 'Next milestone activated successfully',
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -331,6 +331,42 @@ export class RoadmapController {
           return res.status(403).json({ success: false, message: err.message });
         }
         if (err.message === 'No locked milestones found to activate') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  // PATCH /api/roadmaps/:roadmapId/milestones/:milestoneId/lock - lock/unlock milestone (trainers only)
+  static async setMilestoneLockState(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const { roadmapId, milestoneId } = req.params as { roadmapId: string; milestoneId: string };
+      const { locked } = req.body as { locked: boolean };
+
+      if (typeof locked !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'locked boolean is required' });
+      }
+
+      const roadmap = await RoadmapService.setMilestoneLockState(
+        roadmapId,
+        parseInt(milestoneId, 10),
+        userId,
+        locked
+      );
+
+      res.json({
+        success: true,
+        data: roadmap,
+        message: locked ? 'Milestone locked' : 'Milestone unlocked',
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Roadmap not found' || err.message === 'Milestone not found in this roadmap') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message.includes('Access denied') || err.message.includes('must be active') || err.message.includes('Only')) {
           return res.status(400).json({ success: false, message: err.message });
         }
       }
