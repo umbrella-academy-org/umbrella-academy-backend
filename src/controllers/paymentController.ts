@@ -113,6 +113,28 @@ export class PaymentController {
     }
   }
 
+  static async confirmPaymentById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const paymentId = req.params.paymentId as string;
+      const payment = await PaymentService.confirmPaymentById(paymentId);
+
+      res.json({
+        success: true,
+        data: payment,
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Payment not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message === 'Payment already confirmed') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
   // GET /payments/status - get payment status for current user
   static async getPaymentStatus(req: Request, res: Response, next: NextFunction) {
     try {
@@ -192,8 +214,8 @@ export class PaymentController {
       };
 
       // Build filter
-      const filter: any = {};
-      if (studentId) filter.studentId = studentId;
+      const filter: Record<string, unknown> = {};
+      if (studentId) filter.student = studentId;
       if (type) filter.type = type;
       if (status) filter.status = status;
 

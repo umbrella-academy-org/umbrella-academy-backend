@@ -97,10 +97,10 @@ export class BookingController {
       // Validate all required approval fields
       const { approvalNotes, sessionDuration, sessionFormat, sessionLocation, preparationRequirements, nextSteps } = approvalData;
       
-      if (!approvalNotes || !sessionDuration || !sessionFormat || !sessionLocation || !preparationRequirements || !nextSteps) {
+      if (!approvalNotes?.trim() || !sessionDuration || !sessionFormat) {
         return res.status(400).json({
           success: false,
-          message: 'All approval fields are required: approvalNotes, sessionDuration, sessionFormat, sessionLocation, preparationRequirements, nextSteps'
+          message: 'Approval notes, session duration, and format are required',
         });
       }
 
@@ -119,7 +119,15 @@ export class BookingController {
         if (err.message === 'Booking cannot be approved in current status') {
           return res.status(400).json({ success: false, message: err.message });
         }
-        if (err.message === 'All approval fields are required') {
+        if (err.message === 'Approval notes, duration, and format are required') {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+        if (
+          err.message.includes('Zoom is not configured') ||
+          err.message.includes('physical location is required') ||
+          err.message.startsWith('Zoom meeting creation failed') ||
+          err.message.startsWith('Zoom authentication failed')
+        ) {
           return res.status(400).json({ success: false, message: err.message });
         }
       }

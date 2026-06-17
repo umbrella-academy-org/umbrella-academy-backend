@@ -183,6 +183,44 @@ export class GuardianController {
     }
   }
 
+  static async getStudentCertificates(req: Request, res: Response, next: NextFunction) {
+    try {
+      const guardianId = req.user!.userId;
+      const studentId = req.params.studentId as string;
+      const result = await GuardianService.getStudentCertificates(guardianId, studentId);
+      res.json({ success: true, data: result.certificates });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Guardian not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message.includes('access')) {
+          return res.status(403).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
+  static async getStudentProjects(req: Request, res: Response, next: NextFunction) {
+    try {
+      const guardianId = req.user!.userId;
+      const studentId = req.params.studentId as string;
+      const result = await GuardianService.getStudentProjects(guardianId, studentId);
+      res.json({ success: true, data: result.projects });
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'Guardian not found') {
+          return res.status(404).json({ success: false, message: err.message });
+        }
+        if (err.message.includes('access')) {
+          return res.status(403).json({ success: false, message: err.message });
+        }
+      }
+      next(err);
+    }
+  }
+
   // POST /api/guardian/invite/resend - Resend invitation (admin only)
   static async resendInvitation(req: Request, res: Response, next: NextFunction) {
     try {

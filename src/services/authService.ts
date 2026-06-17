@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist } from '../models/User';
-import { sendEmail } from '../services/emailService';
+import { UserModel, GuardianModel, StudentModel, TrainerModel, OnboardingChecklist, UserRole, Guardian } from '../models/User';
+import { queueEmail } from '../services/emailService';
 import { GuardianService } from './guardianService';
 import { ApiResponse } from '@/interfaces/api';
 import { StudentRegister } from '@/interfaces/auth';
@@ -12,58 +12,95 @@ export class AuthService {
     return jwt.sign({ userId, role }, secret, { expiresIn: '7d' });
   }
 
+  static requiresGuardian(ageRange?: string) {
+    return ageRange === 'under-13' || ageRange === '13-17';
+  }
+
   static async registerStudent(studentData: StudentRegister) {
-    const { guardianName, guardianEmail, guardianPhoneNumber, ...studentInfo } = studentData;
-    const student = studentInfo as any;
+    const {
+      guardianName,
+      guardianEmail,
+      guardianPhoneNumber,
+      guardianRelationship,
+      ageRange,
+      ...studentInfo
+    } = studentData;
+    const student = studentInfo as Record<string, unknown>;
 
-    const hashedPassword = await bcrypt.hash(student.password, 10);
+    const hasGuardianDetails = Boolean(guardianEmail?.trim());
+    if (AuthService.requiresGuardian(ageRange) && !hasGuardianDetails) {
+      throw new Error('Guardian information is required for students under 18');
+    }
+
+    if (hasGuardianDetails && (!guardianName?.trim() || !guardianEmail?.trim())) {
+      throw new Error('Guardian name and email are required when adding a guardian');
+    }
+
+    const hashedPassword = await bcrypt.hash(String(student.password), 10);
     student.password = hashedPassword;
+    if (ageRange) {
+      student.ageRange = ageRange;
+    }
 
-    const guardian = {
-      firstName: guardianName,
-      email: guardianEmail,
-      phoneNumber: guardianPhoneNumber,
-      lastName: "unknown",
-      password: "unknown",
-    };
+    let savedGuardian: Guardian | null = null;
+    if (hasGuardianDetails) {
+      savedGuardian = await GuardianModel.create({
+        firstName: guardianName!.trim(),
+        email: guardianEmail!.trim().toLowerCase(),
+        phoneNumber: guardianPhoneNumber?.trim() || '',
+        lastName: 'Guardian',
+        password: 'pending-invite',
+        role: UserRole.GUARDIAN,
+      });
+      student.guardianId = savedGuardian._id;
+      student.guardianRelationship = guardianRelationship?.trim() || null;
+    }
 
-    const savedGuardian = await GuardianModel.create(guardian);
-    student.guardianId = savedGuardian.id;
     const savedStudent = await StudentModel.create(student);
-    savedGuardian.linkedStudentIds.push(savedStudent.id);
-    await savedGuardian.save();
 
-    // Send guardian invitation email
+    if (savedGuardian) {
+      savedGuardian.linkedStudentIds.push(savedStudent._id.toString());
+      await savedGuardian.save();
+
+      try {
+        const invitationToken = GuardianService.generateInvitationToken(
+          savedGuardian._id.toString(),
+          savedStudent._id.toString()
+        );
+
+        GuardianService.sendGuardianInvitation(
+          savedGuardian.email,
+          savedGuardian.firstName,
+          `${savedStudent.firstName} ${savedStudent.lastName}`,
+          invitationToken
+        );
+      } catch (error) {
+        console.warn('Failed to queue guardian invitation email:', error);
+      }
+    }
+
     try {
-      const invitationToken = GuardianService.generateInvitationToken(
-        savedGuardian._id.toString(),
-        savedStudent._id.toString()
-      );
-
-      await this.sendOtp(savedStudent.email)
-
-      await GuardianService.sendGuardianInvitation(
-        savedGuardian.email,
-        savedGuardian.firstName,
-        `${savedStudent.firstName} ${savedStudent.lastName}`,
-        invitationToken
-      );
-
-
+      await AuthService.issueOtpForEmail(savedStudent.email);
     } catch (error) {
-      // Log error but don't fail registration if email fails
-      console.warn('Failed to send guardian invitation and student otp email:', error);
+      console.warn('Failed to queue student OTP email:', error);
+    }
+
+    try {
+      const { SalesLeadService } = await import('./salesLeadService');
+      await SalesLeadService.upsertFromStudent(savedStudent);
+    } catch (error) {
+      console.warn('Failed to create sales lead:', error);
     }
 
     const token = AuthService.signToken(String(savedStudent._id), savedStudent.role);
 
     return {
       success: true,
-      message: "Student registered successfully",
+      message: 'Student registered successfully',
       data: {
         token,
-        user: savedStudent.toJSON()
-      }
+        user: savedStudent.toJSON(),
+      },
     } as ApiResponse;
   }
 
@@ -73,6 +110,7 @@ export class AuthService {
     trainer.password = hashedPassword;
 
     const savedTrainer = await TrainerModel.create(trainer);
+    await AuthService.issueOtpForEmail(savedTrainer.email);
     const token = AuthService.signToken(String(savedTrainer._id), savedTrainer.role);
 
     return {
@@ -85,44 +123,77 @@ export class AuthService {
     } as ApiResponse;
   }
 
-  static async sendOtp(email: string) {
-    const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    if (user) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedOtp = await bcrypt.hash(otp, 10);
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-
-      await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
-
-      try {
-        await sendEmail({
-          to_email: email,
-          to_name: user.firstName || 'User',
-          subject: 'Your Dreamize Verification Code',
-          message: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`
-        });
-      } catch (error) {
-        console.error('Error sending OTP', error);
-      }
+  private static async issueOtpForEmail(
+    email: string,
+    subject = 'Your Dreamize Verification Code',
+    messagePrefix = 'Your verification code is'
+  ): Promise<void> {
+    const normalizedEmail = email?.toLowerCase().trim();
+    if (!normalizedEmail) {
+      console.warn('[auth] Cannot send OTP — email address is missing');
+      return;
     }
 
+    const user = await UserModel.findOne({ email: normalizedEmail });
+    if (!user) {
+      console.warn(`[auth] Cannot send OTP — no user found for ${normalizedEmail}`);
+      return;
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
+
+    if (process.env.EMAIL_DEBUG === 'true') {
+      console.info(`[auth][debug] OTP for ${normalizedEmail}: ${otp}`);
+    }
+
+    queueEmail({
+      to_email: normalizedEmail,
+      to_name: user.firstName || 'User',
+      subject,
+      message: `${messagePrefix}: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
+    });
+  }
+
+  static async sendOtp(email: string) {
+    await AuthService.issueOtpForEmail(email);
     return { success: true };
   }
 
   static async verifyOtp(email: string, otp: string) {
-    const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    if (!user || !user.otpCode || !user.otpExpiry) {
-      return { success: false, message: 'Invalid or expired OTP' };
+    const normalizedEmail = email?.toLowerCase().trim();
+    const user = await UserModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return { success: false, message: 'No account found for this email.' };
+    }
+
+    if (user.isVerified) {
+      return {
+        success: true,
+        message: 'Email already verified.',
+        data: {
+          user: user.toJSON(),
+          token: this.signToken(String(user._id), user.role),
+        },
+      };
+    }
+
+    if (!user.otpCode || !user.otpExpiry) {
+      return { success: false, message: 'Invalid or expired OTP. Please request a new code.' };
     }
 
     if (user.otpExpiry < new Date()) {
-      return { success: false, message: 'Invalid or expired OTP' };
+      return { success: false, message: 'Invalid or expired OTP. Please request a new code.' };
     }
 
     const isValid = await bcrypt.compare(otp, user.otpCode);
 
     if (!isValid) {
-      return { success: false, message: 'Invalid or expired OTP' };
+      return { success: false, message: 'Incorrect verification code. Please try again.' };
     }
 
     const savedUser = await UserModel.findByIdAndUpdate(user._id, { $unset: { otpCode: 1, otpExpiry: 1 }, isVerified: true }, { new: true });
@@ -138,25 +209,7 @@ export class AuthService {
 
 
   static async resendOtp(email: string) {
-    const user = await UserModel.findOne({ email: email?.toLowerCase() });
-    if (user) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedOtp = await bcrypt.hash(otp, 10);
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-
-      await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
-      try {
-        await sendEmail({
-          to_email: email,
-          to_name: user.firstName || 'User',
-          subject: 'Your Dreamize Verification Code',
-          message: `Your verification code is: ${otp}\n\nThis code expiresn in 10 minutes. Do not share it with anyone.`
-        });
-      } catch (error) {
-        console.error('Error sending OTP', error);
-      }
-    }
-
+    await AuthService.issueOtpForEmail(email);
     return { success: true };
   }
 
@@ -170,16 +223,12 @@ export class AuthService {
 
       await UserModel.findByIdAndUpdate(user._id, { otpCode: hashedOtp, otpExpiry }, { new: true });
 
-      try {
-        await sendEmail({
-          to_email: email,
-          to_name: user.firstName || 'User',
-          subject: 'Reset Your Dreamize Password',
-          message: `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`
-        });
-      } catch {
-        // ignore
-      }
+      queueEmail({
+        to_email: email,
+        to_name: user.firstName || 'User',
+        subject: 'Reset Your Dreamize Password',
+        message: `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`,
+      });
     }
 
     return { success: true };
@@ -228,7 +277,7 @@ export class AuthService {
         };
       }
 
-      await GuardianService.sendGuardianInvitation(
+      GuardianService.sendGuardianInvitation(
         user.email,
         user.firstName,
         `${student.firstName} ${student.lastName}`,

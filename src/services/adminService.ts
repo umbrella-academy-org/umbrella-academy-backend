@@ -1,5 +1,5 @@
 import { TrainerModel } from '../models/User';
-import { sendEmail } from '../services/emailService';
+import { queueEmail } from '../services/emailService';
 
 export class AdminService {
   static async getPendingTrainers() {
@@ -39,18 +39,13 @@ export class AdminService {
     trainer.approvedAt = new Date();
     await trainer.save();
 
-    // Send approval email
-    try {
-      await sendEmail({
-        to_email: trainer.email,
-        to_name: trainer.firstName,
-        subject: 'Your Trainer Application Has Been Approved',
-        message: `Congratulations! Your trainer application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/auth/login`
-      });
-    } catch (error) {
-      // Ignore email errors but log if needed
-      console.warn('Failed to send approval email:', error);
-    }
+    // Send approval email in background
+    queueEmail({
+      to_email: trainer.email,
+      to_name: trainer.firstName,
+      subject: 'Your Trainer Application Has Been Approved',
+      message: `Congratulations! Your trainer application has been approved. You can now log in at: ${process.env.FRONTEND_URL}/auth/login`
+    });
 
     return trainer;
   }
@@ -72,18 +67,13 @@ export class AdminService {
     trainer.rejectionReason = rejectionReason;
     await trainer.save();
 
-    // Send rejection email
-    try {
-      await sendEmail({
-        to_email: trainer.email,
-        to_name: trainer.firstName,
-        subject: 'Your Trainer Application Has Been Rejected',
-        message: `We regret to inform you that your trainer application has not been approved at this time. Reason: ${rejectionReason}`
-      });
-    } catch (error) {
-      // Ignore email errors but log if needed
-      console.warn('Failed to send rejection email:', error);
-    }
+    // Send rejection email in background
+    queueEmail({
+      to_email: trainer.email,
+      to_name: trainer.firstName,
+      subject: 'Your Trainer Application Has Been Rejected',
+      message: `We regret to inform you that your trainer application has not been approved at this time. Reason: ${rejectionReason}`
+    });
 
     return trainer;
   }

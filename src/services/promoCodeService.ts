@@ -1,5 +1,5 @@
 import { PromoCodeModel, PromoCode } from '../models/Payment';
-import { UserModel } from '../models/User';
+import { StudentModel } from '../models/User';
 
 export interface CreatePromoCodeData {
   code: string;
@@ -28,9 +28,8 @@ export class PromoCodeService {
     }
 
     // Find student by email
-    const student = await UserModel.findOne({ 
+    const student = await StudentModel.findOne({
       email: data.assignedStudentEmail,
-      role: 'student'
     });
 
     if (!student) {
@@ -101,9 +100,8 @@ export class PromoCodeService {
 
     // If email is being updated, verify the new student exists
     if (data.assignedStudentEmail && data.assignedStudentEmail !== promoCode.assignedStudentEmail) {
-      const student = await UserModel.findOne({ 
+      const student = await StudentModel.findOne({
         email: data.assignedStudentEmail,
-        role: 'student'
       });
 
       if (!student) {

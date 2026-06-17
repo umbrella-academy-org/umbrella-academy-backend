@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { GuardianModel, StudentModel, Guardian, GuardianInviteState } from '../models/User';
-import { sendEmail } from './emailService';
+import { queueEmail } from './emailService';
 
 const INVITATION_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
@@ -40,15 +40,15 @@ export class GuardianService {
   }
 
   // Send guardian invitation email
-  static async sendGuardianInvitation(
+  static sendGuardianInvitation(
     guardianEmail: string,
     guardianName: string,
     studentName: string,
     invitationToken: string
-  ): Promise<void> {
+  ): void {
     const setPasswordUrl = `${process.env.FRONTEND_URL}/auth/guardian/set-password?token=${invitationToken}`;
 
-    await sendEmail({
+    queueEmail({
       to_email: guardianEmail,
       to_name: guardianName,
       subject: "You've been invited as a Guardian on DREAMIZE-AFRICA",
@@ -261,6 +261,34 @@ The DREAMIZE-AFRICA Team`
     };
   }
 
+  static async assertGuardianCanAccessStudent(guardianId: string, studentId: string) {
+    const guardian = await GuardianModel.findById(guardianId);
+    if (!guardian) {
+      throw new Error('Guardian not found');
+    }
+
+    if (!guardian.linkedStudentIds.some((id) => String(id) === studentId)) {
+      throw new Error('You do not have access to this student');
+    }
+
+    return guardian;
+  }
+
+  static async getStudentCertificates(guardianId: string, studentId: string) {
+    await this.assertGuardianCanAccessStudent(guardianId, studentId);
+    const { CertificateService } = await import('./certificateService');
+    const certificates = await CertificateService.getStudentCertificates(studentId);
+    return { success: true, certificates };
+  }
+
+  static async getStudentProjects(guardianId: string, studentId: string) {
+    await this.assertGuardianCanAccessStudent(guardianId, studentId);
+    const { ProjectService } = await import('./projectService');
+    const { ProjectStatus } = await import('../models/Project');
+    const projects = await ProjectService.getStudentProjects(studentId, ProjectStatus.APPROVED);
+    return { success: true, projects };
+  }
+
   // Resend invitation (in case original expired or was lost)
   static async resendInvitation(
     guardianId: string,
@@ -288,7 +316,7 @@ The DREAMIZE-AFRICA Team`
     // Generate new token and send
     const invitationToken = this.generateInvitationToken(guardianId, studentId);
 
-    await this.sendGuardianInvitation(
+    this.sendGuardianInvitation(
       guardian.email,
       guardian.firstName,
       `${student.firstName} ${student.lastName}`,

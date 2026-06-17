@@ -1,52 +1,91 @@
 import { Request, Response, NextFunction } from 'express';
-import { ChatService } from '../services/chatService';
+import { ChatService, ChatPermissionError } from '../services/chatService';
+import type { MessageAttachment } from '../models/Message';
+
+function handleChatError(err: unknown, res: Response, next: NextFunction) {
+  if (err instanceof ChatPermissionError) {
+    return res.status(403).json({ success: false, message: err.message });
+  }
+  if (err instanceof Error && err.message === 'Message text or attachment is required.') {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+  return next(err);
+}
+
+function serializeMessage(message: {
+  _id: unknown;
+  senderId: unknown;
+  recipientId: unknown;
+  text: string;
+  attachment?: MessageAttachment | null;
+  isRead: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
+}) {
+  return ChatService.formatMessage(message);
+}
 
 export class ChatController {
-  // GET /api/chat/contacts - list distinct users the authenticated user has exchanged messages with
   static async getContacts(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.userId;
       const contacts = await ChatService.getContacts(userId);
       res.json({ success: true, data: contacts });
     } catch (err) {
-      next(err);
+      handleChatError(err, res, next);
     }
   }
 
-  // GET /api/chat/messages/:contactId - paginated message history between two users
   static async getMessages(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.userId;
       const contactId = req.params.contactId as string;
-      
-      const skip = parseInt(Array.isArray(req.query.skip) ? '0' : (req.query.skip as string) ?? '0', 10) || 0;
-      const limit = parseInt(Array.isArray(req.query.limit) ? '50' : (req.query.limit as string) ?? '50', 10) || 50;
+
+      const skip = parseInt(String(req.query.skip ?? '0'), 10) || 0;
+      const limit = parseInt(String(req.query.limit ?? '50'), 10) || 50;
 
       const messages = await ChatService.getMessages(userId, contactId, skip, limit);
-      res.json({ success: true, data: messages });
+      res.json({
+        success: true,
+        data: messages.map((message) => serializeMessage(message)),
+      });
     } catch (err) {
-      next(err);
+      handleChatError(err, res, next);
     }
   }
 
-  // POST /api/chat/messages - send a message
   static async sendMessage(req: Request, res: Response, next: NextFunction) {
     try {
       const senderId = req.user!.userId;
-      const { recipientId, text } = req.body;
+      const { recipientId, text, attachment } = req.body;
 
-      if (!recipientId || !text) {
-        return res.status(400).json({ success: false, message: 'recipientId and text are required' });
+      if (!recipientId) {
+        return res.status(400).json({ success: false, message: 'recipientId is required' });
       }
 
-      const message = await ChatService.sendMessage(senderId, recipientId, text);
-      res.status(201).json({ success: true, data: message });
+      if (!text?.trim() && !attachment) {
+        return res.status(400).json({ success: false, message: 'text or attachment is required' });
+      }
+
+      const message = await ChatService.sendMessage(senderId, recipientId, text ?? '', attachment);
+      res.status(201).json({
+        success: true,
+        data: serializeMessage({
+          _id: message._id,
+          senderId: message.senderId,
+          recipientId: message.recipientId,
+          text: message.text,
+          attachment: message.attachment ?? undefined,
+          isRead: message.isRead,
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
+        }),
+      });
     } catch (err) {
-      next(err);
+      handleChatError(err, res, next);
     }
   }
 
-  // PUT /api/chat/messages/:contactId/read - mark messages as read
   static async markMessagesAsRead(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.userId;
@@ -55,11 +94,10 @@ export class ChatController {
       const result = await ChatService.markMessagesAsRead(userId, contactId);
       res.json({ success: true, data: result });
     } catch (err) {
-      next(err);
+      handleChatError(err, res, next);
     }
   }
 
-  // GET /api/chat/unread-count - get unread message count
   static async getUnreadMessageCount(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.userId;

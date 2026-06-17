@@ -98,10 +98,11 @@ jest.mock('../routes/system', () => {
   return { default: Router() };
 });
 
-// ─── Mock emailService to avoid real EmailJS calls ──────────────────────────
+// ─── Mock emailService to avoid real SMTP calls ─────────────────────────────
 jest.mock('../services/emailService', () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
-  EMAILJS_TEMPLATE_ID: 'template_unified',
+  queueEmail: jest.fn(),
+  verifySmtpConnection: jest.fn().mockResolvedValue(true),
 }));
 
 import express from 'express';

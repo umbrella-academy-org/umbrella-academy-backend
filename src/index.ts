@@ -4,6 +4,9 @@ import cors from 'cors';
 import http from 'http';
 import connectDB from './config/db';
 import { initSocket } from './services/socket';
+import { verifySmtpConnection } from './services/emailService';
+import { ZoomService } from './services/zoomService';
+import { startSubscriptionMaintenanceScheduler } from './services/subscriptionMaintenanceService';
 import './seed/seedOwner';
 
 import authRoutes from './routes/auth';
@@ -21,6 +24,10 @@ import projectRoutes from './routes/projects'; // Importing projects route
 import promoCodeRoutes from './routes/promoCodes';
 import promoCodePublicRoutes from './routes/promoCodesPublic';
 import guardianRoutes from './routes/guardian';
+import certificateRoutes from './routes/certificates';
+import notificationRoutes from './routes/notifications';
+import publicRoutes from './routes/public';
+import salesRoutes from './routes/sales';
 
 const app = express();
 
@@ -55,6 +62,10 @@ app.use('/api/projects', projectRoutes); // Importing projects route
 app.use('/api/admin/promo-codes', promoCodeRoutes);
 app.use('/api/promo-codes', promoCodePublicRoutes);
 app.use('/api/guardian', guardianRoutes);
+app.use('/api/certificates', certificateRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/sales', salesRoutes);
 
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -73,8 +84,15 @@ initSocket(server);
 const startServer = async () => {
   try {
     await connectDB();
+    await verifySmtpConnection();
+    if (ZoomService.isConfigured()) {
+      console.info('[zoom] Server-to-Server OAuth configured — meetings will be created on booking approval');
+    } else {
+      console.warn('[zoom] Not configured — online approvals require a manual meeting link or Zoom env vars');
+    }
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      startSubscriptionMaintenanceScheduler();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

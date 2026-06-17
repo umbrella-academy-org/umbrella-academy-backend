@@ -19,7 +19,7 @@ export class PaymentService {
 
     // Check if orientation payment already exists and is successful
     const existingOrientationPayment = await PaymentModel.findOne({
-      studentId,
+      student: studentId,
       type: PaymentType.ORIENTATION,
       status: 'success'
     });
@@ -85,7 +85,7 @@ export class PaymentService {
 
     // Check if orientation payment is completed
     const orientationPayment = await PaymentModel.findOne({
-      studentId,
+      student: studentId,
       type: PaymentType.ORIENTATION,
       status: 'success'
     });
@@ -131,7 +131,15 @@ export class PaymentService {
     // Create subscription record
     await this.createOrUpdateSubscription(studentId);
 
-    await user.updateOne({ $set: { hasActiveSubscription: true } });
+    const { SubscriptionMaintenanceService } = await import('./subscriptionMaintenanceService');
+    await SubscriptionMaintenanceService.syncStudentSubscription(studentId);
+
+    try {
+      const { SalesLeadService } = await import('./salesLeadService');
+      await SalesLeadService.markSubscribed(studentId);
+    } catch (error) {
+      console.warn('Failed to update sales lead for subscription:', error);
+    }
 
     return {
       payment,
@@ -158,15 +166,33 @@ export class PaymentService {
     // If it's a subscription payment, create/update subscription
     if (payment.type === PaymentType.SUBSCRIPTION) {
       await this.createOrUpdateSubscription(payment.student);
+      try {
+        const { SalesLeadService } = await import('./salesLeadService');
+        await SalesLeadService.markSubscribed(String(payment.student));
+      } catch (error) {
+        console.warn('Failed to update sales lead for subscription:', error);
+      }
     }
 
     return payment;
   }
 
+  static async confirmPaymentById(paymentId: string) {
+    const payment =
+      (await PaymentModel.findOne({ id: paymentId })) ||
+      (await PaymentModel.findById(paymentId));
+
+    if (!payment) {
+      throw new Error('Payment not found');
+    }
+
+    return this.confirmPayment(payment.transactionRef);
+  }
+
   static async getPaymentStatus(studentId: string, paymentType?: PaymentType) {
 
-    const filter: any = {};
-    if (studentId) filter.studentId = studentId;
+    const filter: Record<string, unknown> = {};
+    if (studentId) filter.student = studentId;
     if (paymentType) filter.type = paymentType;
 
     const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
@@ -182,22 +208,8 @@ export class PaymentService {
   }
 
   static async getSubscriptionStatus(studentId: string) {
-    const subscription = await SubscriptionModel.findOne({ studentId });
-    if (!subscription) {
-      return null;
-    }
-
-    // Update days remaining and color code
-    const now = new Date();
-    const expiryDate = new Date(subscription.expiryDate);
-    const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    subscription.daysRemaining = Math.max(0, daysRemaining);
-    subscription.colorCode = this.getSubscriptionColor(daysRemaining);
-    subscription.isActive = daysRemaining > 0;
-
-    await subscription.save();
-    return subscription;
+    const { SubscriptionMaintenanceService } = await import('./subscriptionMaintenanceService');
+    return SubscriptionMaintenanceService.syncStudentSubscription(studentId);
   }
 
   private static async validatePromoCode(code: string, studentId: string): Promise<PromoCode | null> {
@@ -236,7 +248,7 @@ export class PaymentService {
     const expiryDate = new Date();
     expiryDate.setMonth(expiryDate.getMonth() + 1); // Add 1 month
 
-    const existingSubscription = await SubscriptionModel.findOne({ studentId });
+    const existingSubscription = await SubscriptionModel.findOne({ student: studentId });
 
     if (existingSubscription) {
       // Extend existing subscription
@@ -292,8 +304,7 @@ export class PaymentService {
   }
 
   static async getPaymentHistory(studentId: string) {
-    const payments = await PaymentModel.find({ studentId })
-      .populate('student', 'name email')
+    const payments = await PaymentModel.find({ student: studentId })
       .sort({ createdAt: -1 })
       .select('-__v');
 

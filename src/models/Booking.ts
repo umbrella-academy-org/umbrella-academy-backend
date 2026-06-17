@@ -18,7 +18,7 @@ export interface TrainerApprovalRequest {
   approvalNotes: string;
   sessionDuration: number; // in minutes
   sessionFormat: 'online' | 'in-person';
-  sessionLocation: string; // URL or physical address
+  sessionLocation?: string; // URL or physical address — optional for online when Zoom auto-creates link
   preparationRequirements: string;
   nextSteps: string;
 }
@@ -35,6 +35,7 @@ export interface Booking extends Document {
   sessionDuration?: number; // in minutes
   sessionFormat?: 'online' | 'in-person';
   sessionLocation?: string; // URL or physical address
+  zoomMeetingId?: string;
   preparationRequirements?: string;
   nextSteps?: string;
   approvedAt?: Date;
@@ -63,7 +64,8 @@ const BookingSchema = new Schema<Booking>({
     enum: ['online', 'in-person'], 
     default: null 
   },
-  sessionLocation: { type: String, default: null }, // URL or physical address
+  sessionLocation: { type: String, default: null },
+  zoomMeetingId: { type: String, default: null },
   preparationRequirements: { type: String, default: null },
   nextSteps: { type: String, default: null },
   approvedAt: { type: Date, default: null },

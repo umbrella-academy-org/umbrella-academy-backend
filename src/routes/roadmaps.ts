@@ -16,6 +16,9 @@ router.get('/:id', authenticate, RoadmapController.getRoadmapById);
 // PUT /api/roadmaps/:id - update roadmap (trainers only)
 router.put('/:id', authenticate, requireRole('trainer'), RoadmapController.updateRoadmap);
 
+// DELETE /api/roadmaps/:id - delete roadmap (trainers only)
+router.delete('/:id', authenticate, requireRole('trainer'), RoadmapController.deleteRoadmap);
+
 // POST /api/roadmaps/:id/submit-for-approval - submit roadmap for approval (trainers only)
 router.post('/:id/submit-for-approval', authenticate, requireRole('trainer'), RoadmapController.submitForApproval);
 
@@ -33,6 +36,9 @@ router.post('/:roadmapId/milestones/:milestoneId/complete', authenticate, requir
 
 // POST /api/roadmaps/:roadmapId/milestones/:milestoneId/approve - approve milestone (trainers only)
 router.post('/:roadmapId/milestones/:milestoneId/approve', authenticate, requireRole('trainer'), RoadmapController.approveMilestone);
+
+// POST /api/roadmaps/:roadmapId/milestones/:milestoneId/reject - reject milestone (trainers only)
+router.post('/:roadmapId/milestones/:milestoneId/reject', authenticate, requireRole('trainer'), RoadmapController.rejectMilestone);
 
 // POST /api/roadmaps/:roadmapId/activate-next-milestone - activate next milestone (students only)
 router.post('/:roadmapId/activate-next-milestone', authenticate, requireRole('student'), RoadmapController.activateNextMilestone);

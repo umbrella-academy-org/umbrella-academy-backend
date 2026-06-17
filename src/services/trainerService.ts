@@ -1,32 +1,22 @@
-import { UserModel } from '../models/User';
+import { TrainerModel } from '../models/User';
 
 export class TrainerService {
   static async getPendingTrainers() {
-    const filter: Record<string, unknown> = {
-      role: 'trainer',
-      approvalStatus: 'pending',
-    };
-
-    const users = await UserModel.find(filter).select('-password');
-    return users;
+    return TrainerModel.find({ approvalStatus: 'pending' }).select('-password');
   }
 
   static async getAllTrainers() {
-    const trainers = await UserModel.find({ role: 'trainer' }).select('-password');
-    return trainers;
+    return TrainerModel.find({}).select('-password');
   }
 
   static async getTrainerById(trainerId: string) {
-    const trainer = await UserModel.findOne({ _id: trainerId, role: 'trainer' }).select('-password');
-    return trainer;
+    return TrainerModel.findById(trainerId).select('-password');
   }
 
   static async getApprovedTrainers() {
-    const trainers = await UserModel.find({ 
-      role: 'trainer', 
+    return TrainerModel.find({
       approvalStatus: 'approved',
-      status: 'active'
+      isActive: true,
     }).select('-password');
-    return trainers;
   }
 }

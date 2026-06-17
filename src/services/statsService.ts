@@ -1,45 +1,52 @@
-import { UserModel } from '../models/User';
+import { StudentModel, TrainerModel, UserModel } from '../models/User';
 import { PaymentModel } from '../models/Payment';
 import { RoadmapModel } from '../models/Roadmap';
+import { CertificateModel } from '../models/Certificate';
+import { BookingModel, BookingStatus } from '../models/Booking';
 
 export class StatsService {
   static async getStudentStats(studentId: string) {
-    const [activeRoadmaps, roadmapProgressAgg] = await Promise.all([
-      RoadmapModel.countDocuments({
-        studentId,
-        status: { $in: ['active', 'approved'] },
-      }),
-      RoadmapModel.aggregate([
-        { $match: { studentId } },
-        { $group: { _id: null, avg: { $avg: '$progress.overallProgress' } } },
-      ]),
-    ]);
+    const roadmaps = await RoadmapModel.find({ student: studentId }).lean();
+    const activeRoadmaps = roadmaps.filter((roadmap) =>
+      ['active', 'approved'].includes(roadmap.status)
+    ).length;
 
-    const roadmapProgress = roadmapProgressAgg[0]?.avg ?? 0;
+    let totalMilestones = 0;
+    let completedMilestones = 0;
+    for (const roadmap of roadmaps) {
+      for (const milestone of roadmap.milestones ?? []) {
+        totalMilestones += 1;
+        if (milestone.status === 'completed') {
+          completedMilestones += 1;
+        }
+      }
+    }
 
-    return { activeRoadmaps, roadmapProgress };
+    const roadmapProgress =
+      totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0;
+
+    return { activeRoadmaps, roadmapProgress, totalMilestones, completedMilestones };
   }
 
   static async getTrainerStats(trainerId: string) {
-    const [assignedStudentsAgg] = await Promise.all([
-      RoadmapModel.aggregate([
-        { $match: { trainerId } },
-        { $group: { _id: '$student' } },
-        { $count: 'count' },
-      ]),
+    const [assignedStudents, pendingBookings, upcomingSessions] = await Promise.all([
+      StudentModel.countDocuments({ assignedTrainerId: trainerId }),
+      BookingModel.countDocuments({ trainer: trainerId, status: BookingStatus.PENDING }),
+      BookingModel.countDocuments({
+        trainer: trainerId,
+        status: BookingStatus.APPROVED,
+        requestedTime: { $gte: new Date() },
+      }),
     ]);
 
-    const assignedStudents = assignedStudentsAgg[0]?.count ?? 0;
-    return { assignedStudents };
+    return { assignedStudents, pendingBookings, upcomingSessions };
   }
 
   static async getAdminStats() {
     const roles = ['student', 'trainer', 'admin'];
 
     const [userCountsByRole, totalRevenueAgg, activeRoadmaps] = await Promise.all([
-      UserModel.aggregate([
-        { $group: { _id: '$role', count: { $sum: 1 } } },
-      ]),
+      UserModel.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
       PaymentModel.aggregate([
         { $match: { status: 'success' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -48,7 +55,7 @@ export class StatsService {
     ]);
 
     const totalUsersByRole: Record<string, number> = {};
-    for (const r of roles) totalUsersByRole[r] = 0;
+    for (const role of roles) totalUsersByRole[role] = 0;
     for (const entry of userCountsByRole) {
       totalUsersByRole[entry._id] = entry.count;
     }
@@ -60,8 +67,8 @@ export class StatsService {
 
   static async getPlatformAnalytics() {
     const [studentCount, trainerCount] = await Promise.all([
-      UserModel.countDocuments({ role: 'student' }),
-      UserModel.countDocuments({ role: 'trainer' }),
+      StudentModel.countDocuments({}),
+      TrainerModel.countDocuments({}),
     ]);
 
     const totalRevenueAgg = await PaymentModel.aggregate([
@@ -79,12 +86,18 @@ export class StatsService {
     const monthlyRevenue = monthlyRevenueAgg[0]?.total ?? 0;
 
     const activeRoadmaps = await RoadmapModel.countDocuments({ status: 'active' });
+    const pendingTrainers = await TrainerModel.countDocuments({ approvalStatus: 'pending' });
+    const activeSubscriptions = await StudentModel.countDocuments({ hasActiveSubscription: true });
+    const totalCertificates = await CertificateModel.countDocuments({});
 
     return {
       usersByRole: { student: studentCount, trainer: trainerCount },
       totalRevenue,
       monthlyRevenue,
       activeRoadmaps,
+      pendingTrainers,
+      activeSubscriptions,
+      totalCertificates,
     };
   }
 }

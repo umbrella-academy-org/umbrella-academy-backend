@@ -8,9 +8,11 @@ export class AuthController {
     try {
       const studentData = req.body as unknown as StudentRegister;
       const response = await AuthService.registerStudent(studentData);
-      await AuthService.sendOtp(studentData.email);
       return res.status(201).json(response);
     } catch (err: any) {
+      if (err instanceof Error && err.message.includes('Guardian')) {
+        return res.status(400).json({ success: false, message: err.message });
+      }
       if (err.code === 11000) {
         return res.status(200).json({ success: false, message: 'An account with this email already exists.' });
       }
@@ -23,7 +25,6 @@ export class AuthController {
     try {
       const trainerData = req.body;
       const response = await AuthService.registerTrainer(trainerData);
-      await AuthService.sendOtp(trainerData.email);
       return res.status(201).json(response);
     } catch (err: any) {
       console.error(err);
