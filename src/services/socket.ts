@@ -2,24 +2,38 @@ import http from 'http';
 import { EventEmitter } from 'events';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import Message from '../models/Message';
+import { ChatService } from './chatService';
 
-// In-memory map of userId → socketId
 export const onlineUsers = new Map<string, string>();
-
-// Shared emitter — route handlers call notificationEmitter.emit('notify', userId, notification)
-// to push new_notification events to connected clients
 export const notificationEmitter = new EventEmitter();
+
+function getSocketOrigins(): string[] {
+  const configured = process.env.FRONTEND_URL;
+  const origins = ['http://localhost:3000', 'https://dreamize-academy.vercel.app'];
+  if (configured && !origins.includes(configured)) {
+    origins.push(configured);
+  }
+  return origins;
+}
+
+function serializeMessage(message: { toJSON?: () => Record<string, unknown> } & Record<string, unknown>) {
+  const json = typeof message.toJSON === 'function' ? message.toJSON() : message;
+  return {
+    ...json,
+    _id: ChatService.normalizeId(json._id),
+    senderId: ChatService.normalizeId(json.senderId),
+    recipientId: ChatService.normalizeId(json.recipientId),
+  };
+}
 
 export function initSocket(server: http.Server): Server {
   const io = new Server(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: getSocketOrigins(),
       credentials: true,
     },
   });
 
-  // Auth middleware — verify handshake.auth.token before allowing connection
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token as string | undefined;
     if (!token) {
@@ -30,7 +44,6 @@ export function initSocket(server: http.Server): Server {
       const decoded = jwt.verify(token, secret) as {
         userId: string;
         role: string;
-        fieldId?: string;
       };
       (socket as any).user = decoded;
       next();
@@ -43,28 +56,28 @@ export function initSocket(server: http.Server): Server {
     const user = (socket as any).user as { userId: string };
     onlineUsers.set(user.userId, socket.id);
 
-    // Handle send_message event
     socket.on(
       'send_message',
-      async ({ recipientId, text }: { recipientId: string; text: string }) => {
+      async (
+        { recipientId, text }: { recipientId: string; text: string },
+        callback?: (response: { success: boolean; message?: unknown; error?: string }) => void
+      ) => {
         try {
-          // Persist message to MongoDB
-          const message = await Message.create({
-            senderId: user.userId,
-            recipientId,
-            text,
-          });
+          const message = await ChatService.sendMessage(user.userId, recipientId, text);
+          const payload = { message: serializeMessage(message as any) };
 
-          // Confirm delivery to sender
-          socket.emit('message_received', { message });
+          socket.emit('message_received', payload);
 
-          // Emit to recipient if online
-          const recipientSocketId = onlineUsers.get(recipientId);
+          const recipientSocketId = onlineUsers.get(ChatService.normalizeId(recipientId));
           if (recipientSocketId) {
-            io.to(recipientSocketId).emit('message_received', { message });
+            io.to(recipientSocketId).emit('message_received', payload);
           }
-        } catch {
-          socket.emit('error', { message: 'Failed to send message' });
+
+          callback?.({ success: true, message: payload.message });
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
+          socket.emit('error', { message: errorMessage });
+          callback?.({ success: false, error: errorMessage });
         }
       }
     );
@@ -74,7 +87,6 @@ export function initSocket(server: http.Server): Server {
     });
   });
 
-  // Forward new_notification events from route handlers to connected clients
   notificationEmitter.on('notify', (userId: string, notification: unknown) => {
     const socketId = onlineUsers.get(userId);
     if (socketId) {
