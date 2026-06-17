@@ -5,6 +5,7 @@ import http from 'http';
 import connectDB from './config/db';
 import { initSocket } from './services/socket';
 import { verifySmtpConnection } from './services/emailService';
+import { ZoomService } from './services/zoomService';
 import './seed/seedOwner';
 
 import authRoutes from './routes/auth';
@@ -77,6 +78,11 @@ const startServer = async () => {
   try {
     await connectDB();
     await verifySmtpConnection();
+    if (ZoomService.isConfigured()) {
+      console.info('[zoom] Server-to-Server OAuth configured — meetings will be created on booking approval');
+    } else {
+      console.warn('[zoom] Not configured — online approvals require a manual meeting link or Zoom env vars');
+    }
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
