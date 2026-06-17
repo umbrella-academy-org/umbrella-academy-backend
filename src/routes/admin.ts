@@ -35,6 +35,13 @@ router.delete('/trainers/:trainerId', authenticate, requireRole('admin'), AdminC
 // GET /payments/admin/payments - get all payments (admin only)
 router.get('/payments', authenticate, requireRole('admin'), PaymentController.getAllPayments);
 
+router.post(
+  '/payments/:paymentId/confirm',
+  authenticate,
+  requireRole('admin'),
+  PaymentController.confirmPaymentById
+);
+
 // GET /payments/admin/subscriptions - get all subscriptions (admin only)
 router.get('/subscriptions', authenticate, requireRole('admin'), PaymentController.getAllSubscriptions);
  

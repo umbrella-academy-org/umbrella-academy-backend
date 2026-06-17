@@ -19,7 +19,7 @@ export class PaymentService {
 
     // Check if orientation payment already exists and is successful
     const existingOrientationPayment = await PaymentModel.findOne({
-      studentId,
+      student: studentId,
       type: PaymentType.ORIENTATION,
       status: 'success'
     });
@@ -85,7 +85,7 @@ export class PaymentService {
 
     // Check if orientation payment is completed
     const orientationPayment = await PaymentModel.findOne({
-      studentId,
+      student: studentId,
       type: PaymentType.ORIENTATION,
       status: 'success'
     });
@@ -177,10 +177,22 @@ export class PaymentService {
     return payment;
   }
 
+  static async confirmPaymentById(paymentId: string) {
+    const payment =
+      (await PaymentModel.findOne({ id: paymentId })) ||
+      (await PaymentModel.findById(paymentId));
+
+    if (!payment) {
+      throw new Error('Payment not found');
+    }
+
+    return this.confirmPayment(payment.transactionRef);
+  }
+
   static async getPaymentStatus(studentId: string, paymentType?: PaymentType) {
 
-    const filter: any = {};
-    if (studentId) filter.studentId = studentId;
+    const filter: Record<string, unknown> = {};
+    if (studentId) filter.student = studentId;
     if (paymentType) filter.type = paymentType;
 
     const payments = await PaymentModel.find(filter).sort({ createdAt: -1 });
