@@ -302,6 +302,20 @@ export class RoadmapService {
       throw new Error('Milestone must be in pending-approval status to be approved');
     }
 
+    const submittedProjectIds = milestone.submittedProjectIds ?? [];
+    if (submittedProjectIds.length === 0) {
+      throw new Error('No submitted projects found for this milestone');
+    }
+
+    const { ProjectModel, ProjectStatus } = await import('../models/Project');
+    const submittedProjects = await ProjectModel.find({ _id: { $in: submittedProjectIds } });
+    if (
+      submittedProjects.length !== submittedProjectIds.length ||
+      !submittedProjects.every((project) => project.status === ProjectStatus.APPROVED)
+    ) {
+      throw new Error('All submitted projects must be approved before completing this milestone');
+    }
+
     // Update milestone status to completed
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
       {
