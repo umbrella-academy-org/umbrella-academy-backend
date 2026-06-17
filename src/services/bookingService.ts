@@ -1,6 +1,8 @@
 import { BookingModel, BookingStatus, Booking, StudentBookingRequest, TrainerApprovalRequest } from '../models/Booking';
 import { StudentModel, TrainerModel } from '../models/User';
 import { PaymentModel, PaymentType } from '../models/Payment';
+import { ZoomService } from './zoomService';
+import { queueSessionApprovedEmails } from './sessionEmailService';
 
 type PopulatedUser = {
   _id?: unknown;
@@ -50,6 +52,7 @@ export class BookingService {
       sessionDuration: record.sessionDuration ?? undefined,
       sessionFormat: record.sessionFormat ?? undefined,
       sessionLocation: record.sessionLocation ?? undefined,
+      zoomMeetingId: record.zoomMeetingId ?? undefined,
       preparationRequirements: record.preparationRequirements ?? undefined,
       nextSteps: record.nextSteps ?? undefined,
       approvedAt: record.approvedAt ?? undefined,
@@ -158,7 +161,10 @@ export class BookingService {
   }
 
   static async approveBooking(bookingId: string, trainerId: string, approvalData: TrainerApprovalRequest) {
-    const booking = await BookingModel.findOne({ id: bookingId, trainer: trainerId });
+    const booking = await BookingModel.findOne({ id: bookingId, trainer: trainerId })
+      .populate('student', 'firstName lastName email')
+      .populate('trainer', 'firstName lastName email');
+
     if (!booking) {
       throw new Error('Booking not found');
     }
@@ -171,13 +177,42 @@ export class BookingService {
       approvalNotes,
       sessionDuration,
       sessionFormat,
-      sessionLocation,
+      sessionLocation = '',
       preparationRequirements = '',
       nextSteps = '',
     } = approvalData;
 
-    if (!approvalNotes?.trim() || !sessionDuration || !sessionFormat || !sessionLocation?.trim()) {
-      throw new Error('Approval notes, duration, format, and location are required');
+    if (!approvalNotes?.trim() || !sessionDuration || !sessionFormat) {
+      throw new Error('Approval notes, duration, and format are required');
+    }
+
+    const student = this.formatUserRef(booking.student);
+    const trainer = this.formatUserRef(booking.trainer);
+    const studentName = `${student.firstName} ${student.lastName}`.trim() || 'Student';
+    const trainerName = `${trainer.firstName} ${trainer.lastName}`.trim() || 'Trainer';
+
+    let resolvedLocation = sessionLocation.trim();
+    let zoomMeetingId: string | undefined;
+    let zoomStartUrl: string | undefined;
+
+    if (sessionFormat === 'online') {
+      if (ZoomService.isConfigured()) {
+        const zoomMeeting = await ZoomService.createMeeting({
+          topic: `Dreamize Orientation — ${studentName}`,
+          startTime: booking.requestedTime,
+          durationMinutes: sessionDuration,
+          agenda: booking.learningGoals,
+        });
+        resolvedLocation = zoomMeeting.joinUrl;
+        zoomMeetingId = zoomMeeting.meetingId;
+        zoomStartUrl = zoomMeeting.startUrl;
+      } else if (!resolvedLocation) {
+        throw new Error(
+          'Zoom is not configured and no meeting link was provided. Add Zoom credentials or paste a meeting link.'
+        );
+      }
+    } else if (!resolvedLocation) {
+      throw new Error('A physical location is required for in-person sessions');
     }
 
     booking.status = BookingStatus.APPROVED;
@@ -185,7 +220,8 @@ export class BookingService {
     booking.approvalNotes = approvalNotes.trim();
     booking.sessionDuration = sessionDuration;
     booking.sessionFormat = sessionFormat;
-    booking.sessionLocation = sessionLocation.trim();
+    booking.sessionLocation = resolvedLocation;
+    booking.zoomMeetingId = zoomMeetingId;
     booking.preparationRequirements = preparationRequirements.trim();
     booking.nextSteps = nextSteps.trim();
 
@@ -194,6 +230,24 @@ export class BookingService {
     await StudentModel.findByIdAndUpdate(booking.student, {
       assignedTrainer: trainerId,
     });
+
+    if (student.email && trainer.email) {
+      queueSessionApprovedEmails({
+        studentName,
+        studentEmail: student.email,
+        trainerName,
+        trainerEmail: trainer.email,
+        sessionTime: booking.requestedTime,
+        durationMinutes: sessionDuration,
+        sessionFormat,
+        joinUrl: sessionFormat === 'online' ? resolvedLocation : undefined,
+        startUrl: zoomStartUrl,
+        location: sessionFormat === 'in-person' ? resolvedLocation : undefined,
+        approvalNotes: approvalNotes.trim(),
+        preparationRequirements: preparationRequirements.trim(),
+        nextSteps: nextSteps.trim(),
+      });
+    }
 
     return this.formatBooking(booking);
   }
@@ -259,6 +313,10 @@ export class BookingService {
 
     if (booking.status === BookingStatus.CANCELLED) {
       throw new Error('Booking is already cancelled');
+    }
+
+    if (booking.zoomMeetingId) {
+      await ZoomService.deleteMeeting(booking.zoomMeetingId);
     }
 
     booking.status = BookingStatus.CANCELLED;
