@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { ChatService } from './chatService';
+import type { MessageAttachment } from '../models/Message';
 
 export const onlineUsers = new Map<string, string>();
 export const notificationEmitter = new EventEmitter();
@@ -18,12 +19,16 @@ function getSocketOrigins(): string[] {
 
 function serializeMessage(message: { toJSON?: () => Record<string, unknown> } & Record<string, unknown>) {
   const json = typeof message.toJSON === 'function' ? message.toJSON() : message;
-  return {
-    ...json,
-    _id: ChatService.normalizeId(json._id),
-    senderId: ChatService.normalizeId(json.senderId),
-    recipientId: ChatService.normalizeId(json.recipientId),
-  };
+  return ChatService.formatMessage({
+    _id: json._id,
+    senderId: json.senderId,
+    recipientId: json.recipientId,
+    text: String(json.text ?? ''),
+    attachment: json.attachment as MessageAttachment | undefined,
+    isRead: Boolean(json.isRead),
+    createdAt: json.createdAt as Date,
+    updatedAt: json.updatedAt as Date | undefined,
+  });
 }
 
 export function initSocket(server: http.Server): Server {
@@ -59,11 +64,24 @@ export function initSocket(server: http.Server): Server {
     socket.on(
       'send_message',
       async (
-        { recipientId, text }: { recipientId: string; text: string },
+        {
+          recipientId,
+          text,
+          attachment,
+        }: {
+          recipientId: string;
+          text: string;
+          attachment?: MessageAttachment;
+        },
         callback?: (response: { success: boolean; message?: unknown; error?: string }) => void
       ) => {
         try {
-          const message = await ChatService.sendMessage(user.userId, recipientId, text);
+          const message = await ChatService.sendMessage(
+            user.userId,
+            recipientId,
+            text ?? '',
+            attachment
+          );
           const payload = { message: serializeMessage(message as any) };
 
           socket.emit('message_received', payload);

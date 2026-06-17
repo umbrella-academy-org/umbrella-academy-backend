@@ -18,18 +18,27 @@ export class FileService {
     return `${uniqueId}${extension}`;
   }
 
-  static async ensureUploadDir(): Promise<void> {
+  static async ensureUploadDir(subdir: 'avatars' | 'messages' = 'avatars'): Promise<void> {
     try {
-      await fs.mkdir('uploads/avatars', { recursive: true });
-    } catch (error) {
+      await fs.mkdir(`uploads/${subdir}`, { recursive: true });
+    } catch {
       // Directory already exists, ignore
     }
   }
 
-  static async saveFile(file: Express.Multer.File, filename: string): Promise<string> {
-    await this.ensureUploadDir();
-    const filePath = path.join('uploads/avatars', filename);
+  static async saveFile(
+    file: Express.Multer.File,
+    filename: string,
+    subdir: 'avatars' | 'messages' = 'avatars'
+  ): Promise<string> {
+    await this.ensureUploadDir(subdir);
+    const filePath = path.join('uploads', subdir, filename);
     await fs.writeFile(filePath, file.buffer);
+
+    if (subdir === 'messages') {
+      return `/uploads/messages/${filename}`;
+    }
+
     return `/api/files/${filename}`;
   }
 
@@ -72,12 +81,52 @@ export class FileService {
     return { isValid: true };
   }
 
+  static validateMessageFile(file: Express.Multer.File): { isValid: boolean; message?: string } {
+    if (!file) {
+      return { isValid: false, message: 'No file provided' };
+    }
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return { isValid: false, message: 'File size too large (max 10MB)' };
+    }
+
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      return {
+        isValid: false,
+        message: 'File type not allowed. Use images, PDF, Word, or plain text.',
+      };
+    }
+
+    return { isValid: true };
+  }
+
   static getFileMetadata(file: Express.Multer.File) {
     return {
       originalName: file.originalname,
       mimetype: file.mimetype,
       size: file.size,
       url: this.generateFileUrl(file.originalname),
+    };
+  }
+
+  static getMessageFileMetadata(file: Express.Multer.File, url: string) {
+    return {
+      url,
+      name: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
     };
   }
 }

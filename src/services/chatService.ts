@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import Message from '../models/Message';
+import Message, { MessageAttachment } from '../models/Message';
 import {
   UserModel,
   StudentModel,
@@ -17,8 +17,88 @@ export class ChatPermissionError extends Error {
 
 export class ChatService {
   static normalizeId(id: unknown): string {
-    if (!id) return '';
-    return String(id);
+    if (id == null || id === '') return '';
+
+    if (typeof id === 'string') return id;
+    if (typeof id === 'number') return String(id);
+
+    // Mongoose 9 ObjectId defines an `_id` getter that returns another ObjectId —
+    // always stringify ObjectId instances before walking `_id`.
+    if (id instanceof Types.ObjectId) {
+      return id.toString();
+    }
+
+    if (typeof id === 'object') {
+      const record = id as Record<string, unknown>;
+
+      if (typeof record.toString === 'function') {
+        const asString = (record as { toString: () => string }).toString();
+        if (/^[a-f0-9]{24}$/i.test(asString)) {
+          return asString;
+        }
+      }
+
+      if (typeof record.$oid === 'string') {
+        return record.$oid;
+      }
+
+      if (typeof record.id === 'string' || typeof record.id === 'number') {
+        return String(record.id);
+      }
+
+      if (record._id != null && record._id !== id) {
+        return this.normalizeId(record._id);
+      }
+    }
+
+    return '';
+  }
+
+  static formatContact(user: {
+    _id: unknown;
+    firstName: string;
+    lastName: string;
+    role: string;
+    profilePicture?: string | null;
+  }) {
+    return {
+      _id: this.normalizeId(user._id),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      profilePicture: user.profilePicture ?? undefined,
+    };
+  }
+
+  static formatMessage(message: {
+    _id: unknown;
+    senderId: unknown;
+    recipientId: unknown;
+    text: string;
+    attachment?: MessageAttachment | null;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt?: Date;
+  }) {
+    return {
+      _id: this.normalizeId(message._id),
+      senderId: this.normalizeId(message.senderId),
+      recipientId: this.normalizeId(message.recipientId),
+      text: message.text ?? '',
+      attachment: message.attachment ?? undefined,
+      isRead: message.isRead,
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
+    };
+  }
+
+  static getMessagePreview(message: { text?: string; attachment?: MessageAttachment | null }): string {
+    if (message.text?.trim()) return message.text.trim();
+    if (message.attachment) {
+      if (message.attachment.mimeType.startsWith('image/')) return 'Photo';
+      return `File: ${message.attachment.name}`;
+    }
+    return '';
   }
 
   static async getAllowedContactIds(userId: string): Promise<Set<string>> {
@@ -96,7 +176,9 @@ export class ChatService {
         const contactObjId = new Types.ObjectId(contactId);
 
         const [contact, lastMessage, unreadCount] = await Promise.all([
-          UserModel.findById(contactObjId).select('firstName lastName avatar role profilePicture'),
+          UserModel.findById(contactObjId)
+            .select('firstName lastName role profilePicture')
+            .lean(),
           Message.findOne({
             $or: [
               { senderId: userObjId, recipientId: contactObjId },
@@ -104,7 +186,8 @@ export class ChatService {
             ],
           })
             .sort({ createdAt: -1 })
-            .select('text createdAt senderId recipientId isRead'),
+            .select('text attachment createdAt senderId recipientId isRead')
+            .lean(),
           Message.countDocuments({
             senderId: contactObjId,
             recipientId: userObjId,
@@ -115,8 +198,8 @@ export class ChatService {
         if (!contact) return null;
 
         return {
-          contact,
-          lastMessage,
+          contact: this.formatContact(contact),
+          lastMessage: lastMessage ? this.formatMessage(lastMessage) : null,
           lastMessageAt: lastMessage?.createdAt ?? null,
           unreadCount,
         };
@@ -146,13 +229,20 @@ export class ChatService {
     })
       .sort({ createdAt: 1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
   }
 
-  static async sendMessage(senderId: string, recipientId: string, text: string) {
-    const trimmed = text?.trim();
-    if (!trimmed) {
-      throw new Error('Message text is required.');
+  static async sendMessage(
+    senderId: string,
+    recipientId: string,
+    text: string,
+    attachment?: MessageAttachment
+  ) {
+    const trimmed = text?.trim() ?? '';
+
+    if (!trimmed && !attachment) {
+      throw new Error('Message text or attachment is required.');
     }
 
     await this.assertCanMessage(senderId, recipientId);
@@ -161,6 +251,7 @@ export class ChatService {
       senderId: new Types.ObjectId(senderId),
       recipientId: new Types.ObjectId(recipientId),
       text: trimmed,
+      attachment: attachment ?? undefined,
       isRead: false,
     });
   }
