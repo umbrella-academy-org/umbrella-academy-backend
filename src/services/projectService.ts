@@ -181,13 +181,13 @@ export class ProjectService {
       { new: true, runValidators: true }
     );
 
-    // Add project to milestone's completed projects and complete the milestone if linked
+    // Add project to milestone's completed projects and auto-complete milestone when ready
     if (project.roadmap && project.milestoneId) {
       try {
-        // Add project to milestone's completed projects
         const roadmap = await RoadmapModel.findById(project.roadmap);
         if (roadmap) {
-          const milestone = roadmap.milestones.find(m => m.order == parseInt(project.milestoneId!.toString()));
+          const milestoneOrder = parseInt(project.milestoneId!.toString(), 10);
+          const milestone = roadmap.milestones.find((m) => m.order == milestoneOrder);
           if (milestone) {
             milestone.completedProjectIds = milestone.completedProjectIds || [];
             if (!milestone.completedProjectIds.includes(projectId)) {
@@ -195,10 +195,17 @@ export class ProjectService {
               await roadmap.save();
             }
           }
-        }
 
+          const { RoadmapService } = await import('./roadmapService');
+          await RoadmapService.tryAutoApproveMilestoneAfterProjectApproval(
+            project.roadmap,
+            milestoneOrder,
+            trainerId,
+            feedback || ''
+          );
+        }
       } catch (error) {
-        console.warn('Failed to update milestone project tracking:', error);
+        console.warn('Failed to update milestone after project approval:', error);
       }
     }
 

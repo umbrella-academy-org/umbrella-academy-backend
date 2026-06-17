@@ -305,6 +305,7 @@ export class RoadmapService {
     }
 
     if (milestone.status === 'completed') {
+      await this.ensureMilestoneCertificate(roadmapId, milestoneId, roadmap, trainerId);
       return roadmap;
     }
 
@@ -352,19 +353,10 @@ export class RoadmapService {
         status: 'completed',
         updatedAt: new Date()
       });
+      await this.ensureRoadmapCompletionCertificate(roadmapId, roadmap, trainerId);
     }
 
-    try {
-      const { CertificateService } = await import('./certificateService');
-      await CertificateService.issueForMilestone({
-        roadmapId,
-        milestoneOrder: milestoneId,
-        studentId: roadmap.student,
-        trainerId,
-      });
-    } catch (error) {
-      console.warn('Failed to issue certificate:', error);
-    }
+    await this.ensureMilestoneCertificate(roadmapId, milestoneId, roadmap, trainerId);
 
     try {
       const { NotificationService } = await import('./notificationService');
@@ -498,8 +490,16 @@ export class RoadmapService {
       throw new Error('Access denied');
     }
 
-    if (!['active'].includes(roadmap.status)) {
-      throw new Error('Roadmap must be active before milestone availability can change');
+    if (!['active', 'approved'].includes(roadmap.status)) {
+      throw new Error('Roadmap must be approved or active before milestone availability can change');
+    }
+
+    if (!locked && roadmap.status === 'approved') {
+      await RoadmapModel.findByIdAndUpdate(roadmap._id, {
+        status: 'active',
+        updatedAt: new Date(),
+      });
+      roadmap.status = 'active';
     }
 
     const milestone = roadmap.milestones.find((m) => m.order === milestoneOrder);
@@ -573,5 +573,67 @@ export class RoadmapService {
     );
 
     return updatedRoadmap;
+  }
+
+  private static async ensureMilestoneCertificate(
+    roadmapId: string,
+    milestoneOrder: number,
+    roadmap: { student: unknown },
+    trainerId: string
+  ) {
+    try {
+      const { CertificateService } = await import('./certificateService');
+      await CertificateService.issueForMilestone({
+        roadmapId,
+        milestoneOrder,
+        studentId: normalizeId(roadmap.student),
+        trainerId,
+      });
+    } catch (error) {
+      console.error('Failed to issue milestone certificate:', error);
+    }
+  }
+
+  private static async ensureRoadmapCompletionCertificate(
+    roadmapId: string,
+    roadmap: { student: unknown },
+    trainerId: string
+  ) {
+    try {
+      const { CertificateService } = await import('./certificateService');
+      await CertificateService.issueForRoadmapCompletion({
+        roadmapId,
+        studentId: normalizeId(roadmap.student),
+        trainerId,
+      });
+    } catch (error) {
+      console.error('Failed to issue roadmap completion certificate:', error);
+    }
+  }
+
+  static async tryAutoApproveMilestoneAfterProjectApproval(
+    roadmapId: string,
+    milestoneOrder: number,
+    trainerId: string,
+    feedback: string
+  ) {
+    const roadmap = await this.findRoadmapById(roadmapId);
+    if (!roadmap) return null;
+
+    const milestone = roadmap.milestones.find((m) => m.order == milestoneOrder);
+    if (!milestone || milestone.status !== 'pending-approval') return null;
+
+    const submittedProjectIds = milestone.submittedProjectIds ?? [];
+    if (submittedProjectIds.length === 0) return null;
+
+    const { ProjectModel, ProjectStatus } = await import('../models/Project');
+    const submittedProjects = await ProjectModel.find({ _id: { $in: submittedProjectIds } });
+    const allApproved =
+      submittedProjects.length === submittedProjectIds.length &&
+      submittedProjects.every((project) => project.status === ProjectStatus.APPROVED);
+
+    if (!allApproved) return null;
+
+    return this.approveMilestone(roadmapId, milestoneOrder, trainerId, feedback);
   }
 }
