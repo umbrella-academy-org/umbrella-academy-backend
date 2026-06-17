@@ -341,7 +341,7 @@ export class RoadmapController {
   // PATCH /api/roadmaps/:roadmapId/milestones/:milestoneId/lock - lock/unlock milestone (trainers only)
   static async setMilestoneLockState(req: Request, res: Response, next: NextFunction) {
     try {
-      const { userId } = req.user!;
+      const { userId, role } = req.user!;
       const { roadmapId, milestoneId } = req.params as { roadmapId: string; milestoneId: string };
       const { locked } = req.body as { locked: boolean };
 
@@ -353,7 +353,8 @@ export class RoadmapController {
         roadmapId,
         parseInt(milestoneId, 10),
         userId,
-        locked
+        locked,
+        role
       );
 
       res.json({

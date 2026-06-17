@@ -43,7 +43,7 @@ router.post('/:roadmapId/milestones/:milestoneId/reject', authenticate, requireR
 router.patch(
   '/:roadmapId/milestones/:milestoneId/lock',
   authenticate,
-  requireRole('trainer'),
+  requireRole('trainer', 'admin'),
   RoadmapController.setMilestoneLockState
 );
 

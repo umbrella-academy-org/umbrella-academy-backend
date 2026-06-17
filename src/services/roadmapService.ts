@@ -129,13 +129,15 @@ export class RoadmapService {
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
       { _id: roadmapId },
       {
-        status: 'approved',
+        status: 'active',
         approvedBy: adminId,
         approvedAt: new Date(),
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
     );
+
+    await this.activateFirstLockedMilestone(roadmapId);
 
     // Update student onboarding status
     await StudentModel.findByIdAndUpdate(roadmap.student, {
@@ -147,7 +149,7 @@ export class RoadmapService {
   }
 
   static async rejectRoadmap(roadmapId: string, adminId: string, rejectionReason: string) {
-    const roadmap = await RoadmapModel.findOne({ id: roadmapId });
+    const roadmap = await RoadmapModel.findById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
     }
@@ -157,7 +159,7 @@ export class RoadmapService {
     }
 
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
-      { id: roadmapId },
+      { _id: roadmap._id },
       {
         status: 'rejected',
         approvedBy: adminId,
@@ -171,9 +173,13 @@ export class RoadmapService {
   }
 
   static async submitForApproval(roadmapId: string, trainerId: string) {
-    const roadmap = await RoadmapModel.findOne({ id: roadmapId, trainerId });
+    const roadmap = await RoadmapModel.findById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
+    }
+
+    if (normalizeId(roadmap.trainer) !== normalizeId(trainerId)) {
+      throw new Error('Access denied: Only the assigned trainer can submit this roadmap');
     }
 
     if (roadmap.status !== 'draft') {
@@ -181,7 +187,7 @@ export class RoadmapService {
     }
 
     const updatedRoadmap = await RoadmapModel.findOneAndUpdate(
-      { id: roadmapId },
+      { _id: roadmap._id },
       {
         status: 'pending-approval',
         updatedAt: new Date()
@@ -193,9 +199,13 @@ export class RoadmapService {
   }
 
   static async activateRoadmap(roadmapId: string, adminId: string) {
-    const roadmap = await RoadmapModel.findById(roadmapId);
+    const roadmap = await this.findRoadmapById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
+    }
+
+    if (roadmap.status === 'active') {
+      return this.activateFirstLockedMilestone(roadmapId);
     }
 
     if (roadmap.status !== 'approved') {
@@ -471,16 +481,21 @@ export class RoadmapService {
   static async setMilestoneLockState(
     roadmapId: string,
     milestoneOrder: number,
-    trainerId: string,
-    locked: boolean
+    userId: string,
+    locked: boolean,
+    role: string
   ) {
     const roadmap = await this.findRoadmapById(roadmapId);
     if (!roadmap) {
       throw new Error('Roadmap not found');
     }
 
-    if (normalizeId(roadmap.trainer) !== normalizeId(trainerId)) {
+    if (role === 'trainer' && normalizeId(roadmap.trainer) !== normalizeId(userId)) {
       throw new Error('Access denied: Only the assigned trainer can update milestones');
+    }
+
+    if (role !== 'admin' && role !== 'trainer') {
+      throw new Error('Access denied');
     }
 
     if (!['active'].includes(roadmap.status)) {
