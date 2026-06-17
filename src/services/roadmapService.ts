@@ -19,16 +19,21 @@ export class RoadmapService {
   }
 
   static async createRoadmap(roadmapData: any, trainerId: string) {
+    const studentId = roadmapData.studentId || roadmapData.student;
+    if (!studentId) {
+      throw new Error('Student is required');
+    }
+
     // Validate student exists
-    const student = await StudentModel.findById(roadmapData.student);
+    const student = await StudentModel.findById(studentId);
     if (!student) {
       throw new Error('Student not found');
     }
 
     // Assign the creating trainer to the student if not already assigned
     if (!student.assignedTrainerId) {
-      await StudentModel.findByIdAndUpdate(roadmapData.studentId, {
-        assignedTrainerId: trainerId
+      await StudentModel.findByIdAndUpdate(studentId, {
+        assignedTrainerId: trainerId,
       });
     } else if (student.assignedTrainerId.toString() !== trainerId) {
       throw new Error('Only the assigned trainer can create roadmap for this student');

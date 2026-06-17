@@ -1,6 +1,16 @@
 import bcrypt from 'bcryptjs';
 import { StudentModel, TrainerModel, UserModel } from '../models/User';
 
+function formatStudentRecord(student: InstanceType<typeof StudentModel>) {
+  const plain = student.toObject();
+  return {
+    ...plain,
+    id: student._id.toString(),
+    _id: student._id.toString(),
+    assignedTrainerId: plain.assignedTrainerId ? String(plain.assignedTrainerId) : null,
+  };
+}
+
 export class UserService {
   static async updateProfile(userId: string, profileData: any) {
     // Filter out undefined/null values to avoid overwriting with null
@@ -39,7 +49,7 @@ export class UserService {
 
   static async getStudents() {
     const students = await StudentModel.find().select('-password');
-    return students.map(student => ({ ...student.toObject(), id: student._id.toString() }));
+    return students.map((student) => formatStudentRecord(student));
   }
 
   static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'suspended') {

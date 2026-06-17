@@ -7,6 +7,7 @@ import {
   AdminModel,
   UserRole,
 } from '../models/User';
+import { TrainerService } from './trainerService';
 
 export class ChatPermissionError extends Error {
   constructor(message: string) {
@@ -118,8 +119,8 @@ export class ChatService {
         break;
       }
       case UserRole.TRAINER: {
-        const students = await StudentModel.find({ assignedTrainerId: userId }).select('_id');
-        students.forEach((student) => allowed.add(this.normalizeId(student._id)));
+        const studentIds = await TrainerService.getTrainerStudentIds(userId);
+        studentIds.forEach((studentId) => allowed.add(studentId));
         const admins = await AdminModel.find({ isActive: true }).select('_id');
         admins.forEach((admin) => allowed.add(this.normalizeId(admin._id)));
         break;
