@@ -1,5 +1,4 @@
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import path from 'path';
 import dotenv from 'dotenv';
 
@@ -13,47 +12,28 @@ export interface SendEmailParams {
   message: string;
 }
 
-let transporter: Transporter | null = null;
+let resendClient: Resend | null = null;
 
-function normalizeSmtpPassword(password: string): string {
-  // Gmail app passwords are often copied with spaces — strip them.
-  return password.replace(/\s+/g, '');
+function getResendApiKey(): string | undefined {
+  return process.env.RESEND_API_KEY?.trim();
 }
 
-function getSmtpConfig() {
-  const host = process.env.SMTP_HOST?.trim();
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS
-    ? normalizeSmtpPassword(process.env.SMTP_PASS.trim())
-    : undefined;
+function getResendClient(): Resend {
+  if (resendClient) return resendClient;
 
-  return { host, port, user, pass };
-}
-
-function getTransporter(): Transporter {
-  if (transporter) return transporter;
-
-  const { host, port, user, pass } = getSmtpConfig();
-
-  if (!host || !user || !pass) {
+  const apiKey = getResendApiKey();
+  if (!apiKey) {
     throw new Error(
-      'SMTP is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS in backend/.env'
+      'Email is not configured. Set RESEND_API_KEY in your environment.'
     );
   }
 
-  transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: process.env.SMTP_SECURE === 'true' || port === 465,
-    auth: { user, pass },
-  });
-
-  return transporter;
+  resendClient = new Resend(apiKey);
+  return resendClient;
 }
 
 function getFromAddress(): string {
-  return process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || 'noreply@dreamize.rw';
+  return process.env.RESEND_FROM?.trim() || 'Dreamize <onboarding@resend.dev>';
 }
 
 function logEmailError(action: string, params: SendEmailParams, error: unknown): void {
@@ -62,24 +42,27 @@ function logEmailError(action: string, params: SendEmailParams, error: unknown):
 }
 
 /**
- * Verify SMTP credentials on server startup.
+ * Verify Resend API key on server startup (HTTPS — works on Render free tier).
  */
 export async function verifySmtpConnection(): Promise<boolean> {
-  const { host, user, pass } = getSmtpConfig();
+  const apiKey = getResendApiKey();
 
-  if (!host || !user || !pass) {
-    console.warn('[email] SMTP not configured — emails will fail until backend/.env is set up.');
+  if (!apiKey) {
+    console.warn('[email] Resend not configured — set RESEND_API_KEY in your environment.');
     return false;
   }
 
   try {
-    await getTransporter().verify();
-    console.info(`[email] SMTP ready (${user} via ${host})`);
+    const { error } = await getResendClient().domains.list();
+    if (error) {
+      throw new Error(error.message);
+    }
+    console.info(`[email] Resend ready (from: ${getFromAddress()})`);
     return true;
   } catch (error) {
-    logEmailError('SMTP verify failed for', {
-      to_email: user,
-      to_name: 'SMTP',
+    logEmailError('Resend verify failed for', {
+      to_email: getFromAddress(),
+      to_name: 'Resend',
       subject: 'connection test',
       message: '',
     }, error);
@@ -88,19 +71,23 @@ export async function verifySmtpConnection(): Promise<boolean> {
 }
 
 /**
- * Send an email via SMTP. OTP codes and reset tokens are never returned from endpoints.
+ * Send an email via Resend. OTP codes and reset tokens are never returned from endpoints.
  */
 export async function sendEmail(params: SendEmailParams): Promise<void> {
   const { to_email, to_name, subject, message } = params;
 
-  await getTransporter().sendMail({
+  const { error } = await getResendClient().emails.send({
     from: getFromAddress(),
-    to: to_email,
+    to: [to_email],
     subject,
     text: message,
     html: message.replace(/\n/g, '<br>'),
-    replyTo: process.env.SMTP_REPLY_TO?.trim() || undefined,
+    replyTo: process.env.RESEND_REPLY_TO?.trim() || undefined,
   });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   console.info(`[email] Sent "${subject}" to ${to_name} <${to_email}>`);
 }
