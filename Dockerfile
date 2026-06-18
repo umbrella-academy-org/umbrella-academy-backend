@@ -1,25 +1,28 @@
 # This is the base image for creating our image
 # This is the builder image
-FROM node:alpine  as builder
+FROM node:alpine as builder
 
 # This is changing the directory we are in
-WORKDIR /app 
+WORKDIR /app
 
-# This is copying the package.json and package-lock.json files to the /app directory
-COPY package.json package-lock.json ./ 
+# Enable pnpm via Corepack
+RUN corepack enable
+
+# This is copying the package.json and pnpm-lock.yaml files to the /app directory
+COPY package.json pnpm-lock.yaml ./
 
 # Installing needed packages for our application faster and more consistent
-RUN npm ci 
+RUN pnpm install --frozen-lockfile
 
 # Copying the rest of the application files to the /app directory
-COPY . . 
+COPY . .
 
 # Running the build command
-RUN npm run build
+RUN pnpm run build
 
 
 # This is the base image for creating our image
-FROM node:alpine  
+FROM node:alpine
 
 # Creating a non-root group and user for security purposes
 # similar to linux commands
@@ -29,9 +32,12 @@ RUN addgroup -g 1001 -S nodejs && \
 # This is changing the directory we are in
 WORKDIR /app
 
-# This is copying the package.json and package-lock.json files to the /app directory
-COPY package.json package-lock.json ./
-RUN npm ci --only-production
+# Enable pnpm via Corepack
+RUN corepack enable
+
+# This is copying the package.json and pnpm-lock.yaml files to the /app directory
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile
 
 
 COPY --from=builder --chown=nodeuser:nodejs /app/dist ./dist
