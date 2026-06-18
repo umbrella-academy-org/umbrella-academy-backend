@@ -1,5 +1,5 @@
 # Builder stage
-FROM node:alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY . .
 RUN pnpm run build && pnpm prune --prod
 
 # Production stage
-FROM node:alpine
+FROM node:20-alpine
 
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodeuser -u 1001 -G nodejs
