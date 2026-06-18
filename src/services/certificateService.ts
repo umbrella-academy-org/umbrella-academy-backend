@@ -12,6 +12,12 @@ function generateCertificateNumber(): string {
   return `DMZ-${Date.now().toString(36).toUpperCase()}-${suffix}`;
 }
 
+function normalizeId(value: unknown): string {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value;
+  return String(value);
+}
+
 export class CertificateService {
   static formatCertificate(certificate: {
     _id: unknown;
@@ -55,13 +61,19 @@ export class CertificateService {
     const roadmap = await RoadmapModel.findById(params.roadmapId);
     if (!roadmap) return null;
 
-    const milestone = roadmap.milestones.find((item) => item.order === params.milestoneOrder);
-    if (!milestone) return null;
+    const milestone = roadmap.milestones.find((item) => item.order == params.milestoneOrder);
+    if (!milestone) {
+      throw new Error(`Milestone order ${params.milestoneOrder} not found in roadmap`);
+    }
+
+    const studentId = normalizeId(params.studentId);
+    const trainerId = normalizeId(params.trainerId);
+    const milestoneId = String(params.milestoneOrder);
 
     const existing = await CertificateModel.findOne({
-      student: params.studentId,
+      student: studentId,
       roadmapId: params.roadmapId,
-      milestoneId: String(params.milestoneOrder),
+      milestoneId,
     });
 
     if (existing) {
@@ -69,34 +81,32 @@ export class CertificateService {
     }
 
     const [student, trainer] = await Promise.all([
-      UserModel.findById(params.studentId).select('firstName lastName'),
-      UserModel.findById(params.trainerId).select('firstName lastName'),
+      UserModel.findById(studentId).select('firstName lastName'),
+      UserModel.findById(trainerId).select('firstName lastName'),
     ]);
 
     const certificateNumber = generateCertificateNumber();
     const studentName = student ? `${student.firstName} ${student.lastName}`.trim() : 'Student';
     const trainerName = trainer ? `${trainer.firstName} ${trainer.lastName}`.trim() : 'Trainer';
 
-    const certificate = await CertificateModel.create({
+    const certificate = new CertificateModel({
       certificateNumber,
-      student: params.studentId,
+      student: studentId,
       studentName,
       roadmapId: params.roadmapId,
-      milestoneId: String(params.milestoneOrder),
+      milestoneId,
       milestoneName: milestone.title,
-      trainer: params.trainerId,
+      trainer: trainerId,
       trainerName,
       completionDate: new Date(),
-      pdfUrl: '',
     });
-
     certificate.pdfUrl = `/api/certificates/${certificate._id.toString()}/download`;
     await certificate.save();
 
     try {
       const { NotificationService } = await import('./notificationService');
       await NotificationService.create({
-        userId: params.studentId,
+        userId: studentId,
         title: 'Certificate issued',
         message: `You earned a certificate for completing "${milestone.title}".`,
         category: 'certificate',
@@ -105,6 +115,69 @@ export class CertificateService {
       });
     } catch (error) {
       console.warn('Failed to create certificate notification:', error);
+    }
+
+    return certificate;
+  }
+
+  static async issueForRoadmapCompletion(params: {
+    roadmapId: string;
+    studentId: string;
+    trainerId: string;
+  }) {
+    const roadmap = await RoadmapModel.findById(params.roadmapId);
+    if (!roadmap) return null;
+
+    const studentId = normalizeId(params.studentId);
+    const trainerId = normalizeId(params.trainerId);
+    const milestoneId = 'roadmap-completion';
+
+    const existing = await CertificateModel.findOne({
+      student: studentId,
+      roadmapId: params.roadmapId,
+      milestoneId,
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    const [student, trainer] = await Promise.all([
+      UserModel.findById(studentId).select('firstName lastName'),
+      UserModel.findById(trainerId).select('firstName lastName'),
+    ]);
+
+    const certificateNumber = generateCertificateNumber();
+    const studentName = student ? `${student.firstName} ${student.lastName}`.trim() : 'Student';
+    const trainerName = trainer ? `${trainer.firstName} ${trainer.lastName}`.trim() : 'Trainer';
+    const milestoneName = `${roadmap.title} — Full Roadmap Completion`;
+
+    const certificate = new CertificateModel({
+      certificateNumber,
+      student: studentId,
+      studentName,
+      roadmapId: params.roadmapId,
+      milestoneId,
+      milestoneName,
+      trainer: trainerId,
+      trainerName,
+      completionDate: new Date(),
+    });
+    certificate.pdfUrl = `/api/certificates/${certificate._id.toString()}/download`;
+    await certificate.save();
+
+    try {
+      const { NotificationService } = await import('./notificationService');
+      await NotificationService.create({
+        userId: studentId,
+        title: 'Roadmap completed',
+        message: `Congratulations! You earned a certificate for completing "${roadmap.title}".`,
+        category: 'certificate',
+        actionUrl: '/dashboard/student/certificates',
+        relatedEntityId: certificate._id.toString(),
+      });
+    } catch (error) {
+      console.warn('Failed to create roadmap completion certificate notification:', error);
     }
 
     return certificate;

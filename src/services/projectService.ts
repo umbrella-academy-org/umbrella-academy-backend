@@ -1,6 +1,6 @@
 import { ProjectModel, ProjectStatus } from '../models/Project';
 import { StudentModel } from '../models/User';
-import { RoadmapModel } from '../models/Roadmap';
+import { RoadmapModel, RoadmapStepStatus } from '../models/Roadmap';
 
 export class ProjectService {
   static async createProject(projectData: any, studentId: string) {
@@ -150,11 +150,20 @@ export class ProjectService {
     return updatedProject;
   }
 
+  private static async assertTrainerCanReviewProject(project: { student: string }, trainerId: string) {
+    const student = await StudentModel.findById(project.student);
+    if (student?.assignedTrainerId != trainerId) {
+      throw new Error('Access denied: You are not assigned to this student');
+    }
+  }
+
   static async approveProject(projectId: string, trainerId: string, feedback: string) {
     const project = await ProjectModel.findById(projectId);
     if (!project) {
       throw new Error('Project not found');
     }
+
+    await this.assertTrainerCanReviewProject(project, trainerId);
 
     if (project.status !== ProjectStatus.PENDING_APPROVAL) {
       throw new Error('Project must be in pending approval status to be approved');
@@ -172,13 +181,13 @@ export class ProjectService {
       { new: true, runValidators: true }
     );
 
-    // Add project to milestone's completed projects and complete the milestone if linked
+    // Add project to milestone's completed projects and auto-complete milestone when ready
     if (project.roadmap && project.milestoneId) {
       try {
-        // Add project to milestone's completed projects
         const roadmap = await RoadmapModel.findById(project.roadmap);
         if (roadmap) {
-          const milestone = roadmap.milestones.find(m => m.order == parseInt(project.milestoneId!.toString()));
+          const milestoneOrder = parseInt(project.milestoneId!.toString(), 10);
+          const milestone = roadmap.milestones.find((m) => m.order == milestoneOrder);
           if (milestone) {
             milestone.completedProjectIds = milestone.completedProjectIds || [];
             if (!milestone.completedProjectIds.includes(projectId)) {
@@ -186,19 +195,17 @@ export class ProjectService {
               await roadmap.save();
             }
           }
-        }
 
-        // Import RoadmapService to avoid circular dependency
-        const { RoadmapService } = await import('./roadmapService');
-        await RoadmapService.approveMilestone(
-          project.roadmap,
-          project.milestoneId,
-          trainerId,
-          feedback
-        );
+          const { RoadmapService } = await import('./roadmapService');
+          await RoadmapService.tryAutoApproveMilestoneAfterProjectApproval(
+            project.roadmap,
+            milestoneOrder,
+            trainerId,
+            feedback || ''
+          );
+        }
       } catch (error) {
-        // Log error but don't fail the project approval
-        console.warn('Failed to complete linked milestone:', error);
+        console.warn('Failed to update milestone after project approval:', error);
       }
     }
 
@@ -227,6 +234,8 @@ export class ProjectService {
       throw new Error('Project not found');
     }
 
+    await this.assertTrainerCanReviewProject(project, trainerId);
+
     if (project.status !== ProjectStatus.PENDING_APPROVAL) {
       throw new Error('Project must be in pending approval status to be rejected');
     }
@@ -241,6 +250,24 @@ export class ProjectService {
       },
       { new: true, runValidators: true }
     );
+
+    if (project.roadmap && project.milestoneId) {
+      try {
+        const roadmap = await RoadmapModel.findById(project.roadmap);
+        if (roadmap) {
+          const milestone = roadmap.milestones.find(
+            (m) => m.order == parseInt(project.milestoneId!.toString())
+          );
+          if (milestone?.status === 'pending-approval') {
+            milestone.status = RoadmapStepStatus.ACTIVE;
+            milestone.trainerFeedback = feedback;
+            await roadmap.save();
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to reopen milestone after project rejection:', error);
+      }
+    }
 
     try {
       const { NotificationService } = await import('./notificationService');

@@ -9,6 +9,13 @@ const router = Router();
 router.get('/me', authenticate, requireRole('trainer'), TrainerController.getSessionTrainer);
 
 router.get(
+  '/me/students',
+  authenticate,
+  requireRole('trainer'),
+  TrainerController.getMyStudents
+);
+
+router.get(
   '/me/availability',
   authenticate,
   requireRole('trainer'),

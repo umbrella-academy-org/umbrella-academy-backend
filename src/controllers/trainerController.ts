@@ -63,4 +63,14 @@ export class TrainerController {
       next(err);
     }
   }
+
+  static async getMyStudents(req: Request, res: Response, next: NextFunction) {
+    try {
+      const trainerId = req.user!.userId;
+      const students = await TrainerService.getTrainerStudents(trainerId);
+      res.json({ success: true, data: students });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
