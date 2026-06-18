@@ -84,7 +84,6 @@ initSocket(server);
 const startServer = async () => {
   try {
     await connectDB();
-    await verifySmtpConnection();
     if (ZoomService.isConfigured()) {
       console.info('[zoom] Server-to-Server OAuth configured — meetings will be created on booking approval');
     } else {
@@ -93,6 +92,7 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       startSubscriptionMaintenanceScheduler();
+      void verifySmtpConnection();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

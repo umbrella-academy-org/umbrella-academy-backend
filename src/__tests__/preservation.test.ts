@@ -54,7 +54,7 @@ jest.mock('../services/socket', () => ({
   initSocket: jest.fn(),
 }));
 
-// ─── Mock emailService to avoid real SMTP calls ─────────────────────────────
+// ─── Mock emailService to avoid real Resend calls ───────────────────────────
 jest.mock('../services/emailService', () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
   queueEmail: jest.fn(),
