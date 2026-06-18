@@ -1,8 +1,7 @@
-import { Resend } from 'resend';
+import emailjs from '@emailjs/nodejs';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Ensure .env is loaded even when this module is imported before index.ts
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export interface SendEmailParams {
@@ -12,28 +11,54 @@ export interface SendEmailParams {
   message: string;
 }
 
-let resendClient: Resend | null = null;
+const DEFAULT_MAX_ATTEMPTS = 3;
+const DEFAULT_BASE_DELAY_MS = 1000;
 
-function getResendApiKey(): string | undefined {
-  return process.env.RESEND_API_KEY?.trim();
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getResendClient(): Resend {
-  if (resendClient) return resendClient;
+function getEmailJsConfig() {
+  return {
+    serviceId: process.env.EMAILJS_SERVICE_ID?.trim(),
+    templateId: process.env.EMAILJS_TEMPLATE_ID?.trim(),
+    publicKey: process.env.EMAILJS_PUBLIC_KEY?.trim(),
+    privateKey: process.env.EMAILJS_PRIVATE_KEY?.trim(),
+  };
+}
 
-  const apiKey = getResendApiKey();
-  if (!apiKey) {
-    throw new Error(
-      'Email is not configured. Set RESEND_API_KEY in your environment.'
-    );
+function isEmailJsConfigured(): boolean {
+  const { serviceId, templateId, publicKey, privateKey } = getEmailJsConfig();
+  return Boolean(serviceId && templateId && publicKey && privateKey);
+}
+
+function getMaxAttempts(): number {
+  const parsed = Number(process.env.EMAIL_MAX_RETRIES);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_MAX_ATTEMPTS;
+}
+
+function getBaseDelayMs(): number {
+  const parsed = Number(process.env.EMAIL_RETRY_DELAY_MS);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_BASE_DELAY_MS;
+}
+
+function isRetryableEmailError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+
+  if (
+    message.includes('not configured') ||
+    message.includes('invalid') ||
+    message.includes('unauthorized') ||
+    message.includes('forbidden') ||
+    (message.includes('template') && message.includes('not found')) ||
+    message.includes('service id') ||
+    message.includes('public key') ||
+    message.includes('private key')
+  ) {
+    return false;
   }
 
-  resendClient = new Resend(apiKey);
-  return resendClient;
-}
-
-function getFromAddress(): string {
-  return process.env.RESEND_FROM?.trim() || 'Dreamize <onboarding@resend.dev>';
+  return true;
 }
 
 function logEmailError(action: string, params: SendEmailParams, error: unknown): void {
@@ -41,63 +66,89 @@ function logEmailError(action: string, params: SendEmailParams, error: unknown):
   console.error(`[email] ${action} "${params.subject}" to ${params.to_email}: ${detail}`);
 }
 
-/**
- * Verify Resend API key on server startup (HTTPS — works on Render free tier).
- */
-export async function verifySmtpConnection(): Promise<boolean> {
-  const apiKey = getResendApiKey();
+async function sendViaEmailJs(params: SendEmailParams): Promise<void> {
+  const { serviceId, templateId, publicKey, privateKey } = getEmailJsConfig();
 
-  if (!apiKey) {
-    console.warn('[email] Resend not configured — set RESEND_API_KEY in your environment.');
-    return false;
+  if (!serviceId || !templateId || !publicKey || !privateKey) {
+    throw new Error(
+      'EmailJS is not configured. Set EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, and EMAILJS_PRIVATE_KEY.'
+    );
   }
 
-  try {
-    const { error } = await getResendClient().domains.list();
-    if (error) {
-      throw new Error(error.message);
+  const { to_email, to_name, subject, message } = params;
+
+  await emailjs.send(
+    serviceId,
+    templateId,
+    { to_email, to_name, subject, message },
+    { publicKey, privateKey }
+  );
+}
+
+async function sendWithRetry(params: SendEmailParams): Promise<void> {
+  const maxAttempts = getMaxAttempts();
+  const baseDelayMs = getBaseDelayMs();
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await sendViaEmailJs(params);
+      if (attempt > 1) {
+        console.info(`[email] Sent on retry attempt ${attempt}/${maxAttempts}`);
+      }
+      return;
+    } catch (error) {
+      lastError = error;
+      const retryable = isRetryableEmailError(error);
+      const isLastAttempt = attempt === maxAttempts;
+
+      if (isLastAttempt || !retryable) {
+        throw error;
+      }
+
+      const delayMs = baseDelayMs * 2 ** (attempt - 1);
+      console.warn(
+        `[email] Attempt ${attempt}/${maxAttempts} failed for "${params.subject}" to ${params.to_email}; retrying in ${delayMs}ms`
+      );
+      await sleep(delayMs);
     }
-    console.info(`[email] Resend ready (from: ${getFromAddress()})`);
-    return true;
-  } catch (error) {
-    logEmailError('Resend verify failed for', {
-      to_email: getFromAddress(),
-      to_name: 'Resend',
-      subject: 'connection test',
-      message: '',
-    }, error);
-    return false;
   }
+
+  throw lastError;
 }
 
 /**
- * Send an email via Resend. OTP codes and reset tokens are never returned from endpoints.
+ * Verify EmailJS credentials on server startup (non-blocking friendly).
+ */
+export async function verifySmtpConnection(): Promise<boolean> {
+  if (!isEmailJsConfigured()) {
+    console.warn(
+      '[email] EmailJS not configured — set EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, and EMAILJS_PRIVATE_KEY.'
+    );
+    return false;
+  }
+
+  console.info('[email] EmailJS ready');
+  return true;
+}
+
+/**
+ * Send an email via EmailJS with retries. OTP codes and reset tokens are never returned from endpoints.
  */
 export async function sendEmail(params: SendEmailParams): Promise<void> {
-  const { to_email, to_name, subject, message } = params;
+  const { to_email, to_name, subject } = params;
 
-  const { error } = await getResendClient().emails.send({
-    from: getFromAddress(),
-    to: [to_email],
-    subject,
-    text: message,
-    html: message.replace(/\n/g, '<br>'),
-    replyTo: process.env.RESEND_REPLY_TO?.trim() || undefined,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  await sendWithRetry(params);
 
   console.info(`[email] Sent "${subject}" to ${to_name} <${to_email}>`);
 }
 
 /**
- * Queue an email without blocking the caller. Failures are logged to the server console.
+ * Queue an email without blocking the caller. Retries run in the background; final failure is logged.
  */
 export function queueEmail(params: SendEmailParams): void {
   console.info(`[email] Queuing "${params.subject}" to ${params.to_email}`);
   void sendEmail(params).catch((error) => {
-    logEmailError('Failed to send', params, error);
+    logEmailError('Failed to send after retries', params, error);
   });
 }
