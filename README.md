@@ -25,6 +25,10 @@ The API runs at **http://localhost:5000** by default.
 
 Health check: **http://localhost:5000/health**
 
+API documentation (Swagger UI): **http://localhost:5000/api/docs**
+
+Raw OpenAPI JSON: **http://localhost:5000/api/docs.json**
+
 ## Environment variables
 
 Copy `.env.example` to `.env` and set the required values:
