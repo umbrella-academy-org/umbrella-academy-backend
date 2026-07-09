@@ -2,6 +2,7 @@ packages:
   - '.'
 
 allowBuilds:
+  '@scarf/scarf': true
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - xlsx@0.19.3

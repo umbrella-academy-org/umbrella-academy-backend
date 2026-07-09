@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import http from 'http';
 import connectDB from './config/db';
+import { setupSwagger } from './config/swagger';
 import { initSocket } from './services/socket';
 import { verifySmtpConnection } from './services/emailService';
 import { ZoomService } from './services/zoomService';
@@ -37,6 +38,8 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+setupSwagger(app);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads'));
